@@ -105,6 +105,7 @@ Core.defaultParams = function () {
     poEvents: { 'POS REPLEN': 'auto', 'ANULADA': 'otra', 'APERT_A': 'otra' }, // resto TDMANUAL* = manual Walmart
     items: {},   // clave -> {...}
     stores: {},  // tienda -> overrides {offset, estado, type, vigencia}
+    formato: { font: 'Calibri', size: 12, header: '4F81BD', headerFont: 'FFFFFF', band: 'D9D9D9' },
     vendor: { vndl1: '240502', nombreDirecta: 'PANIFICADORA AMERICANA', nombreCedi: 'PANIFICADORA AMERICANA S A', base9: '24050281' }
   };
 };

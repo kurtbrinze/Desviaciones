@@ -3,6 +3,13 @@
   "version": "1.0.0",
   "private": true,
   "description": "Análisis de desviaciones venta vs FCST Walmart — PANISA",
-  "scripts": { "build": "python3 build.py" },
-  "dependencies": { "chart.js": "4.4.1", "xlsx": "0.18.5" }
+  "scripts": {
+    "build": "python3 build.py"
+  },
+  "dependencies": {
+    "chart.js": "4.4.1",
+    "exceljs": "4.4.0",
+    "exceljs": "^4.4.0",
+    "xlsx": "0.18.5"
+  }
 }

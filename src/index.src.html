@@ -92,10 +92,11 @@ td.zero{background:var(--rbg);color:var(--rtx);font-weight:700}td.ocd{box-shadow
 <div id="toast" role="status"></div>
 <script>/*__XLSX__*/</script>
 <script>/*__CHART__*/</script>
+<script>/*__EXCELJS__*/</script>
 <script>/*__CORE__*/</script>
 <script>
 'use strict';
-const VERSION = 'V.3';
+const VERSION = 'V.4';
 const $ = s => document.querySelector(s);
 const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmt = (n, d = 0) => n == null || isNaN(n) ? '—' : Number(n).toLocaleString('es-GT', { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -109,7 +110,7 @@ const ESTADO_TXT = { rojo: '● Rojo', amarillo: '▲ Amarillo', verde: '✓ Ver
 const S = {
   dir: null, frDir: null, params: Core.defaultParams(), data: null, A: null, view: 'resumen',
   filt: { canal: '', vendedor: '', formato: '', clave: '', estado: '', motivo: '', q: '', mant: false }, page: 1, sortKey: '',
-  detKey: null, ocEdits: {}, ocExtra: [], fcEdits: {}, ocTab: '37', ocCediDate: '', paramTab: 'general',
+  detKey: null, ocEdits: {}, ocExtra: [], fcEdits: {}, ocTab: '37', ocCediDate: '', paramTab: 'general', fcMot: null,
   log: [], status: {}, solicitudes: [], track: [], cmpFreq: [], frSum: null, frWeek: null, chart: null
 };
 try { const d = JSON.parse(localStorage.getItem('ad_borrador') || '{}'); S.ocEdits = d.ocEdits || {}; S.ocExtra = d.ocExtra || []; S.fcEdits = d.fcEdits || {}; } catch (e) { }
@@ -171,6 +172,7 @@ function mergeParams(p) {
   out.general = Object.assign({}, d.general, p.general || {});
   for (const k of ['frObj', 'diasInv', 'leadTime', 'diasSeguridad']) out.general[k] = Object.assign({}, d.general[k], (p.general || {})[k] || {});
   out.vendor = Object.assign({}, d.vendor, p.vendor || {});
+  out.formato = Object.assign({}, d.formato, p.formato || {});
   out.poEvents = Object.assign({}, d.poEvents, p.poEvents || {});
   return out;
 }
@@ -287,22 +289,22 @@ async function saveParams(reload) {
 }
 
 /* ---------- filtros ---------- */
-function filtered() {
+function filtered(sinMotivo) {
   if (!S.A) return [];
-  const f = S.filt, q = f.q.trim().toLowerCase();
+  const f = sinMotivo ? Object.assign({}, S.filt, { motivo: '' }) : S.filt, q = f.q.trim().toLowerCase();
   return S.A.combos.filter(c =>
     (!f.canal || String(c.st) === f.canal) && (!f.vendedor || c.vendedor === f.vendedor) && (!f.formato || c.formato === f.formato) &&
     (!f.clave || c.clave === f.clave) && (!f.estado || c.estado === f.estado) && (!f.motivo || c.motivo === f.motivo) && (!f.mant || c.mant) &&
     (!q || String(c.s).includes(q) || (c.name || '').toLowerCase().includes(q) || String(c.item).includes(q) || c.clave.toLowerCase().includes(q)));
 }
 const uniq = (arr) => Array.from(new Set(arr.filter(Boolean))).sort();
-function filterBar() {
+function filterBar(sinMotivo) {
   const C = S.A ? S.A.combos : [], f = S.filt;
   const sel = (k, lbl, opts, all) => `<label class="f">${lbl} <select data-filt="${k}"><option value="">${all}</option>${opts.map(o => `<option value="${esc(o[0])}" ${String(f[k]) === String(o[0]) ? 'selected' : ''}>${esc(o[1])}</option>`).join('')}</select></label>`;
   return `<div class="filters">
   ${sel('canal', 'Canal', [['37', 'Directas'], ['33', 'CEDI']], 'Todos')}
   ${sel('estado', 'Estado', [['rojo', 'Rojo'], ['amarillo', 'Amarillo'], ['verde', 'Verde']], 'Todos')}
-  ${sel('motivo', 'Motivo', uniq(C.map(c => c.motivo)).map(m => [m, m]), 'Todos')}
+  ${sinMotivo ? '' : sel('motivo', 'Motivo', uniq(C.map(c => c.motivo)).map(m => [m, m]), 'Todos')}
   ${sel('vendedor', 'Vendedor', uniq(C.map(c => c.vendedor)).map(m => [m, m]), 'Todos')}
   ${sel('formato', 'Formato', uniq(C.map(c => c.formato)).map(m => [m, m]), 'Todos')}
   ${sel('clave', 'Clave', uniq(C.map(c => c.clave)).map(m => [m, m]), 'Todas')}
@@ -517,31 +519,59 @@ function vOC() {
   <div class="tw"><table><thead><tr><th>Solicitud</th><th>Formato</th><th class="r">Líneas</th><th class="r">Solicitado</th><th class="r">Encontradas en FR</th><th class="r">Recibido</th><th>Cumplimiento</th><th>Archivo</th></tr></thead>
   <tbody>${tr.map(t => `<tr><td>${esc(new Date(t.fecha).toLocaleDateString('es-GT'))}</td><td>${esc(t.formato)}</td><td class="r">${t.lines.length}</td><td class="r">${fmt(t.solicitado)}</td><td class="r">${t.encontradas}</td><td class="r">${fmt(t.recibido)}</td><td>${t.encontradas ? `<span class="tag ${t.pct >= .95 ? 'verde' : t.pct >= .8 ? 'amarillo' : 'rojo'}">${pct(t.pct)}</span>` : '<span class="tag gray">Pendiente</span>'}</td><td class="small">${esc(t.archivo)}</td></tr>`).join('') || '<tr><td colspan="8" class="empty">Aún no hay solicitudes exportadas.</td></tr>'}</tbody></table></div></section>`;
 }
+/* ---------- Excel con el formato de la casa (Parámetros › Formato Excel) ---------- */
+function utcDate(s) { const d = Core.parseISO(s); return d ? new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())) : null; }
+async function styledXlsx(sheetName, header, rows, opt) {
+  opt = opt || {};
+  const F = S.params.formato, hex = v => 'FF' + String(v || '000000').replace('#', '').toUpperCase();
+  const wb = new ExcelJS.Workbook(); wb.creator = 'Análisis Desviaciones';
+  const ws = wb.addWorksheet(String(sheetName).slice(0, 31));
+  ws.addRow(header); rows.forEach(r => ws.addRow(r));
+  const tc = opt.totalCol;
+  if (tc != null) {
+    const L = ws.getColumn(tc + 1).letter, t = new Array(header.length).fill(null);
+    t[0] = 'Total'; t[tc] = { formula: 'SUM(' + L + '2:' + L + (rows.length + 1) + ')', result: rows.reduce((a, r) => a + (+r[tc] || 0), 0) };
+    ws.addRow(t);
+  }
+  const last = ws.rowCount, med = { style: 'medium', color: { argb: 'FF000000' } };
+  for (let i = 1; i <= last; i++) {
+    const row = ws.getRow(i); row.height = i === 1 ? 16.5 : 15.75;
+    for (let c = 1; c <= header.length; c++) {
+      const cell = row.getCell(c);
+      cell.font = { name: F.font, size: +F.size || 12, bold: i === 1, color: { argb: i === 1 ? hex(F.headerFont) : 'FF000000' } };
+      if (i === 1) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: hex(F.header) } };
+      else if (i % 2 === 0) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: hex(F.band) } };
+      const b = {}; if (i <= 2) b.top = med; if (i === last) b.bottom = med; cell.border = b;
+    }
+  }
+  (opt.dateCols || []).forEach(ci => { ws.getColumn(ci + 1).numFmt = 'mm/dd/yyyy'; });
+  header.forEach((h, i) => {
+    let w = String(h).length + 3;
+    for (const r of rows.slice(0, 400)) { const v = r[i]; const l = v instanceof Date ? 11 : String(v == null ? '' : v).length + 2; if (l > w) w = l; }
+    ws.getColumn(i + 1).width = Math.min(48, w * (+F.size || 12) / 11);
+  });
+  return await wb.xlsx.writeBuffer();
+}
 const mdy = s => { const d = Core.parseISO(s); return String(d.getMonth() + 1).padStart(2, '0') + ' ' + String(d.getDate()).padStart(2, '0') + ' ' + d.getFullYear(); };
 function xlSerial(s) { const d = Core.parseISO(s); return d ? (Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(1899, 11, 30)) / 864e5 : null; }
 async function exportOC() {
   if (!S.dir) return toast('Conecta la carpeta del proyecto.');
   const tab = S.ocTab, act = ocLines().filter(l => l.tab === tab && l.incl && +l.qty > 0);
   if (!act.length) return toast('No hay líneas incluidas.');
-  const V = S.params.vendor; let aoa, name, sheet;
+  const V = S.params.vendor; let buf, name;
   if (tab === '37') {
     const first = act.map(l => l.cancel).filter(Boolean).sort()[0] || S.A.t0;
-    aoa = [['VNDL1', 'VENDOR', 'STORE NBR', 'FORMATO', 'NOMBRE DE TIENDA', 'TYPE', 'TYPE', 'ITEM NBR', 'DESCRIPCION', 'CÓDIGO', 'OC SUGERIDO', 'CANCEL DATE']]
-      .concat(act.map(l => [+V.vndl1, V.nombreDirecta, l.c.s, Core.formatoOC(l.c.formato), l.c.name, '37', 'DIRECTO', l.c.item, l.c.descOC, l.c.codigoOC, +l.qty, l.cancel || '']));
-    name = 'OC ADD Cancel Date ' + mdy(first) + ' Directa.xlsx'; sheet = 'DIRECTAS';
+    name = 'OC ADD Cancel Date ' + mdy(first) + ' Directa.xlsx';
+    buf = await styledXlsx('DIRECTAS', ['VNDL1', 'VENDOR', 'STORE NBR', 'FORMATO', 'NOMBRE DE TIENDA', 'TYPE', 'TYPE', 'ITEM NBR', 'DESCRIPCION', 'CÓDIGO', 'OC SUGERIDO', 'CANCEL DATE'],
+      act.map(l => [+V.vndl1, V.nombreDirecta, l.c.s, Core.formatoOC(l.c.formato), l.c.name, '37', 'DIRECTO', l.c.item, l.c.descOC, l.c.codigoOC, +l.qty, utcDate(l.cancel)]),
+      { dateCols: [11], totalCol: 10 });
   } else {
     const seq = +tab.slice(-1), cd = S.ocCediDate;
-    aoa = [['VENDOR', 'VENDOR NAME', 'SECUENCIA', 'ORDER TYPE', 'TIENDA', 'NOMBRE', 'ITEM NBR', 'DESCRIPCION', 'CLAVE', 'OC']]
-      .concat(act.map(l => [+(V.base9 + seq), V.nombreCedi, +('81' + seq), 73, l.c.s, l.c.dssName, l.c.item, l.c.desc, l.c.clave + ' CD', +l.qty]));
-    aoa.push(['Total', null, null, null, null, null, null, null, null, act.reduce((a, l) => a + (+l.qty), 0)]);
-    name = 'OC ADD Cancel Date ' + mdy(cd) + ' PANISA ' + seq + '.xlsx'; sheet = 'CANCEL DATE ' + mdy(cd);
+    name = 'OC ADD Cancel Date ' + mdy(cd) + ' PANISA ' + seq + '.xlsx';
+    buf = await styledXlsx('CANCEL DATE ' + mdy(cd), ['VENDOR', 'VENDOR NAME', 'SECUENCIA', 'ORDER TYPE', 'TIENDA', 'NOMBRE', 'ITEM NBR', 'DESCRIPCION', 'CLAVE', 'OC'],
+      act.map(l => [+(V.base9 + seq), V.nombreCedi, +('81' + seq), 73, l.c.s, l.c.dssName, l.c.item, l.c.desc, l.c.clave + ' CD', +l.qty]),
+      { totalCol: 9 });
   }
-  const ws = XLSX.utils.aoa_to_sheet(aoa);
-  if (tab === '37') for (let r = 1; r < aoa.length; r++) { const v = xlSerial(aoa[r][11]); if (v != null) ws[XLSX.utils.encode_cell({ r, c: 11 })] = { t: 'n', v, z: 'mm/dd/yyyy' }; }
-  ws['!cols'] = aoa[0].map((h, i) => ({ wch: Math.min(40, Math.max(String(h).length + 2, ...aoa.slice(1, 200).map(r => String(r[i] == null ? '' : r[i]).length + 1))) }));
-  ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: 0, c: aoa[0].length - 1 } }) };
-  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, sheet.slice(0, 31));
-  const buf = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
   await writeFile(S.dir, 'OC Manuales/Solicitudes/' + name, buf);
   const sol = { fecha: new Date().toISOString(), formato: tab === '37' ? 'Directas 810' : 'CEDI 81' + tab.slice(-1), archivo: name, lines: act.map(l => ({ s: l.c.s, i: l.c.item, clave: l.c.clave, qty: +l.qty, cancel: l.cancel || S.ocCediDate })) };
   const datos = await sub(S.dir, '_datos', true); await writeJSON(datos, 'solicitudes/' + stamp(sol.fecha) + '_' + tab + '.json', sol);
@@ -552,14 +582,23 @@ async function exportOC() {
 function fcLines() {
   return S.A.combos.filter(c => Object.keys(c.fcstSug).length).map(c => { const e = S.fcEdits[c.key] || {}; return { c, incl: e.incl !== false, base: e.base != null ? +e.base : Math.round(c.dem) }; });
 }
+function fcVisible() {
+  const FS = new Set(filtered(true)); const base = fcLines().filter(l => FS.has(l.c));
+  const mot = S.fcMot; return { base, L: mot ? base.filter(l => mot.includes(l.c.motivo)) : base };
+}
 function vFcst() {
-  const FS = new Set(filtered()); const L = fcLines().filter(l => FS.has(l.c)), W = S.A.fcstWeeks.slice(0, 6);
+  const { base, L } = fcVisible(), W = S.A.fcstWeeks.slice(0, 6);
+  const cnt = {}; base.forEach(l => cnt[l.c.motivo] = (cnt[l.c.motivo] || 0) + 1);
+  const mots = Object.entries(cnt).sort((a, b) => b[1] - a[1]);
   const act = L.filter(l => l.incl);
   const up = c => Object.fromEntries(c.uplifts.map(u => [u.L, u.pct]));
   return `
   <div class="between"><div><div class="eyebrow">FCST vigente del ${S.status.fcst && S.status.fcst.length ? new Date(S.status.fcst[S.status.fcst.length - 1]).toLocaleDateString('es-GT') : '—'} · formato provisional hasta recibir el de Walmart</div><h1>Ajuste de FCST</h1></div>
   <div class="chips"><button class="btn" data-act="fcExport">Exportar ${act.length} combinaciones</button></div></div>
-  ${filterBar()}
+  ${filterBar(true)}
+  <section class="card pad"><div class="between" style="align-items:center"><h2>Motivos a incluir</h2><span class="chips"><button class="btn ghost" data-act="fcMotAll">Todos</button><button class="btn ghost" data-act="fcMotNone">Ninguno</button></span></div>
+   <div class="chips" style="margin-top:12px">${mots.map(([m, n]) => `<label class="chip" style="cursor:pointer;${!S.fcMot || S.fcMot.includes(m) ? 'background:#E3E8EF;color:var(--tx)' : ''}"><input type="checkbox" data-fc-mot="${esc(m)}" ${!S.fcMot || S.fcMot.includes(m) ? 'checked' : ''}> ${esc(m)} · ${n}</label>`).join('') || '<span class="muted small">Sin combinaciones con ajuste sugerido.</span>'}</div>
+   <div class="small muted" style="margin-top:8px">El reporte de Excel incluye solo los motivos marcados y las combinaciones con casilla activa.</div></section>
   <div class="kpis">
    <div class="card kpi"><div class="l">Subir FCST</div><div class="v">${act.filter(l => l.base > (l.c.fcst4 || 0)).length}</div><div class="s">venta sostenida sobre el pronóstico</div></div>
    <div class="card kpi"><div class="l">Bajar FCST</div><div class="v">${act.filter(l => l.base < (l.c.fcst4 || 0)).length}</div><div class="s">venta bajo el pronóstico o devolución alta</div></div>
@@ -572,17 +611,14 @@ function vFcst() {
 }
 async function exportFcst() {
   if (!S.dir) return toast('Conecta la carpeta del proyecto.');
-  const FS = new Set(filtered()); const L = fcLines().filter(l => l.incl && FS.has(l.c)); if (!L.length) return toast('No hay combinaciones marcadas.');
-  const W = S.A.fcstWeeks.slice(0, 6);
-  const aoa = [['CANAL', 'STORE NBR', 'NOMBRE', 'ITEM NBR', 'CLAVE', 'DESCRIPCION', 'SEMANA WM', 'FCST ACTUAL', 'FCST SUGERIDO', 'LIFT', 'MOTIVO', 'LLAVE TDA']];
+  const L = fcVisible().L.filter(l => l.incl); if (!L.length) return toast('No hay combinaciones marcadas con esos motivos.');
+  const W = S.A.fcstWeeks.slice(0, 6), rows = [];
   for (const l of L) { const c = l.c, u = Object.fromEntries(c.uplifts.map(x => [x.L, x.pct]));
-    for (const w of W) { const f = c.fcstW[w] == null ? null : Math.round(c.fcstW[w] * 100) / 100, s = Math.round(l.base * (1 + (u[w] || 0))); aoa.push([c.canal, c.s, c.name, c.item, c.clave, c.desc, w, f, s, f == null ? null : Math.round((s - f) * 100) / 100, c.motivo, 'K1_WMT_ST_' + String(c.s).padStart(5, '0')]); } }
-  const ws = XLSX.utils.aoa_to_sheet(aoa); ws['!cols'] = [8, 10, 28, 11, 8, 36, 11, 12, 13, 9, 26, 17].map(w => ({ wch: w }));
-  ws['!autofilter'] = { ref: 'A1:L1' };
-  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'AJUSTE FCST');
-  const d = new Date(), name = 'Ajuste FCST ' + mdy(Core.ymd(d)) + '.xlsx';
-  await writeFile(S.dir, 'Ajuste FCST/Solicitudes/' + name, XLSX.write(wb, { type: 'array', bookType: 'xlsx' }));
-  toast('Guardado en Ajuste FCST\\Solicitudes\\' + name, 6000);
+    for (const w of W) { const f = c.fcstW[w] == null ? null : Math.round(c.fcstW[w] * 100) / 100, s = Math.round(l.base * (1 + (u[w] || 0))); rows.push([c.canal, c.s, c.name, c.item, c.clave, c.desc, w, f, s, f == null ? null : Math.round((s - f) * 100) / 100, c.motivo, 'K1_WMT_ST_' + String(c.s).padStart(5, '0')]); } }
+  const buf = await styledXlsx('AJUSTE FCST', ['CANAL', 'STORE NBR', 'NOMBRE', 'ITEM NBR', 'CLAVE', 'DESCRIPCION', 'SEMANA WM', 'FCST ACTUAL', 'FCST SUGERIDO', 'LIFT', 'MOTIVO', 'LLAVE TDA'], rows);
+  const name = 'Ajuste FCST ' + mdy(Core.ymd(new Date())) + '.xlsx';
+  await writeFile(S.dir, 'Ajuste FCST/Solicitudes/' + name, buf);
+  toast('Guardado en Ajuste FCST\\Solicitudes\\' + name + ' · ' + L.length + ' combinaciones', 6000);
 }
 /* ---------- Carga de datos ---------- */
 function vCarga() {
@@ -622,7 +658,7 @@ function setPath(o, p, v) { const ks = p.split('.'); let a = o; ks.slice(0, -1).
 function vParam() {
   const P = S.params, G = P.general, t = S.paramTab;
   const inp = (p, extra) => `<input type="number" step="any" data-p="${p}" value="${esc(getPath(P, p))}" ${extra || ''} style="width:100%">`;
-  const tabs = [['general', 'General'], ['items', 'Items'], ['tiendas', 'Tiendas'], ['eventos', 'Calendario y eventos'], ['ordenes', 'Órdenes'], ['vendor', 'Vendor']];
+  const tabs = [['general', 'General'], ['items', 'Items'], ['tiendas', 'Tiendas'], ['eventos', 'Calendario y eventos'], ['ordenes', 'Órdenes'], ['vendor', 'Vendor'], ['excel', 'Formato Excel']];
   let body = '';
   if (t === 'general') body = `<div class="row"><section class="card pad" style="flex:1 1 420px"><h2 style="margin-bottom:14px">Objetivos por canal</h2>
    <div class="grid2"><span></span><span class="small muted">DIRECTAS</span><span class="small muted">CEDI</span>
@@ -663,6 +699,14 @@ function vParam() {
    <span>Nombre en formato Directas</span><input type="text" data-p="vendor.nombreDirecta" data-txt="1" value="${esc(P.vendor.nombreDirecta)}">
    <span>Nombre en formato CEDI</span><input type="text" data-p="vendor.nombreCedi" data-txt="1" value="${esc(P.vendor.nombreCedi)}">
    <span>Base del vendor de 9 dígitos (+ secuencia)</span><input type="text" data-p="vendor.base9" data-txt="1" value="${esc(P.vendor.base9)}"></div></section>`;
+  if (t === 'excel') { const F = P.formato, col = (k, l) => `<span>${l}</span><input type="color" data-p="formato.${k}" data-txt="1" data-hex="1" value="#${esc(F[k])}" style="width:100%;height:36px;padding:2px">`;
+    body = `<div class="row"><section class="card pad" style="flex:1 1 360px;max-width:520px"><h2 style="margin-bottom:6px">Formato de los reportes de Excel</h2><div class="small muted" style="margin-bottom:14px">Se aplica a OC Directas, OC CEDI y Ajuste FCST. Basado en tu primera solicitud de OC manual.</div>
+    <div class="grid1" style="grid-template-columns:1fr 160px"><span>Fuente</span><input type="text" data-p="formato.font" data-txt="1" value="${esc(F.font)}">
+    <span>Tamaño</span><input type="number" data-p="formato.size" value="${esc(F.size)}">
+    ${col('header', 'Color del encabezado')}${col('headerFont', 'Letra del encabezado')}${col('band', 'Color de filas alternas')}</div></section>
+    <section class="card pad" style="flex:1 1 360px"><h2 style="margin-bottom:12px">Vista previa</h2>
+    <table style="font-family:${esc(F.font)},sans-serif;border-top:2px solid #000;border-bottom:2px solid #000;width:auto"><tr>${['TIENDA', 'NOMBRE', 'CLAVE', 'OC'].map(h => `<th style="background:#${esc(F.header)};color:#${esc(F.headerFont)};font-size:13px;text-transform:none;letter-spacing:0;border-bottom:2px solid #000">${h}</th>`).join('')}</tr>
+    ${[[21, 'PAIZ VISTA HERMOSA', 'S26 CD', 3], [37, 'DF COATEPEQUE', '6PC4 CD', 3], [92, 'DF ESCUINTLA', '5HM4 CD', 15], ['Total', '', '', 21]].map((r, i) => `<tr>${r.map(v => `<td style="background:${i % 2 === 0 ? '#' + esc(F.band) : '#fff'};color:#000;border-bottom:none">${v}</td>`).join('')}</tr>`).join('')}</table></section></div>`; }
   return `<div class="between"><h1>Parámetros</h1><div class="chips"><span class="small muted">${S.dir ? 'Se guardan en _datos\\parametros.json' : 'Conecta la carpeta para guardar'}</span><button class="btn" data-act="saveParams">Guardar y recalcular</button></div></div>
   <div class="tabs" role="tablist">${tabs.map(([k, n]) => `<button role="tab" aria-selected="${k === t}" class="${k === t ? 'on' : ''}" data-ptab="${k}">${n}</button>`).join('')}</div>${body}`;
 }
@@ -688,6 +732,8 @@ document.addEventListener('click', async e => {
     if (c.estado === 'rojo') { const e2 = S.ocEdits[k] || (S.ocEdits[k] = {}); e2.incl = e2.incl === false; }
     else { const i = S.ocExtra.findIndex(x => x.key === k); if (i >= 0) S.ocExtra.splice(i, 1); else S.ocExtra.push({ key: k }); }
     saveDraft(); render(); toast('OC manual actualizada'); return; }
+  if (act === 'fcMotAll') { S.fcMot = null; render(); return; }
+  if (act === 'fcMotNone') { S.fcMot = []; render(); return; }
   if (act === 'fcToggle') { const k = a.dataset.k, e2 = S.fcEdits[k] || (S.fcEdits[k] = {}); e2.incl = e2.incl === false; saveDraft(); render(); return; }
   if (act === 'ocReset') { if (confirm('Quitar todos los cambios manuales de las OC?')) { S.ocEdits = {}; S.ocExtra = []; saveDraft(); render(); } return; }
   if (act === 'ocExport') { busy(true, 'Exportando…'); try { await exportOC(); } catch (er) { toast('Error al exportar: ' + er.message, 6000); } busy(false); return; }
@@ -707,14 +753,22 @@ document.addEventListener('change', e => {
   if (el.dataset.ocIncl) { const k = el.dataset.ocIncl, c = S.A.combos.find(x => x.key === k); if (c.estado === 'rojo') (S.ocEdits[k] || (S.ocEdits[k] = {})).incl = el.checked; else if (!el.checked) S.ocExtra = S.ocExtra.filter(x => x.key !== k); saveDraft(); render(); return; }
   if (el.dataset.ocQty) { (S.ocEdits[el.dataset.ocQty] || (S.ocEdits[el.dataset.ocQty] = {})).qty = Math.max(0, +el.value || 0); saveDraft(); render(); return; }
   if (el.dataset.ocCancel) { (S.ocEdits[el.dataset.ocCancel] || (S.ocEdits[el.dataset.ocCancel] = {})).cancel = el.value; saveDraft(); return; }
+  if (el.dataset.fcMot != null) {
+    const all = Array.from(new Set(fcLines().map(l => l.c.motivo)));
+    let cur = S.fcMot ? S.fcMot.slice() : all.slice(); const m = el.dataset.fcMot;
+    cur = el.checked ? Array.from(new Set(cur.concat(m))) : cur.filter(x => x !== m);
+    S.fcMot = all.every(x => cur.includes(x)) ? null : cur; render(); return;
+  }
   if (el.dataset.fcIncl) { (S.fcEdits[el.dataset.fcIncl] || (S.fcEdits[el.dataset.fcIncl] = {})).incl = el.checked; saveDraft(); render(); return; }
   if (el.dataset.fcBase) { (S.fcEdits[el.dataset.fcBase] || (S.fcEdits[el.dataset.fcBase] = {})).base = Math.max(0, +el.value || 0); saveDraft(); render(); return; }
   if (el.dataset.p) {
     let val = el.type === 'checkbox' ? el.checked : el.value;
     if (!el.dataset.txt && el.type !== 'checkbox') val = el.value === '' ? null : +el.value;
     if (el.tagName === 'SELECT' && !el.dataset.txt) val = el.value === '' ? null : +el.value;
+    if (el.dataset.hex) val = String(val).replace('#', '').toUpperCase();
     if (el.dataset.p.startsWith('fyOverrides.') && !val) { delete S.params.fyOverrides[el.dataset.p.split('.')[1]]; return; }
     setPath(S.params, el.dataset.p, val);
+    if (el.dataset.p.startsWith('formato.')) render();
   }
 });
 document.addEventListener('input', e => { if (e.target.dataset.filt === 'q') { clearTimeout(S.qh); const el = e.target; S.qh = setTimeout(() => { S.filt.q = el.value; S.page = 1; render(); const n = document.querySelector('[data-filt=q]'); if (n) { n.focus(); n.setSelectionRange(n.value.length, n.value.length); } }, 350); } });
