@@ -1,0 +1,728 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Análisis Desviaciones · PANISA</title>
+<style>
+:root{--bg:#F5F5F3;--card:#FFFFFF;--line:#E3E5E8;--line2:#EEF0F2;--tx:#1F2328;--mut:#5B636E;--acc:#2F3A4A;--nav:#1F2733;
+--r:#C62828;--rbg:#FDECEA;--rtx:#A61B1B;--y:#D98A00;--ybg:#FFF2DB;--ytx:#7A4A00;--g:#2E7D32;--gbg:#E8F2EA;--gtx:#22582B}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:Inter,"Segoe UI",system-ui,sans-serif;font-size:14px}
+a{color:var(--acc);text-decoration:none;cursor:pointer}a:hover{color:#11161D;text-decoration:underline}
+#app{display:flex;flex-wrap:wrap;min-height:100vh}
+#nav{flex:1 1 220px;max-width:240px;background:var(--nav);color:#E6E8EB;padding:24px 16px;display:flex;flex-direction:column;gap:4px}
+#nav .brand{font-size:15px;font-weight:700;color:#fff;padding:0 12px 4px}
+#nav .sub{font-size:12px;color:#9AA3AE;padding:0 12px 20px}
+#nav button{all:unset;display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:8px;color:#C9CED5;font-size:14px;cursor:pointer}
+#nav button:hover{background:#2A3442}#nav button.on{background:#334155;color:#fff;font-weight:600}
+#nav button:focus-visible{outline:2px solid #9AA3AE}
+#nav .ver{margin-top:auto;padding:16px 12px 0;font-size:12px;color:#9AA3AE}
+#main{flex:999 1 560px;min-width:0;padding:28px 32px;display:flex;flex-direction:column;gap:20px}
+h1{margin:4px 0 0;font-size:26px;font-weight:700}h2{margin:0;font-size:16px;font-weight:600}
+.eyebrow{font-size:12px;color:var(--mut);font-weight:500}
+.row{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start}
+.between{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px}
+.pad{padding:16px 18px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
+.kpi{padding:16px}.kpi .l{font-size:12px;color:var(--mut)}.kpi .v{font-size:28px;font-weight:700;margin-top:6px}.kpi .s{font-size:12px;color:var(--mut);margin-top:4px}
+.kpi.red{border-top:4px solid var(--r)}.kpi.yel{border-top:4px solid var(--y)}.kpi.grn{border-top:4px solid var(--g)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.chip{font-size:12px;padding:6px 10px;border-radius:999px;background:#EEF0F2;color:var(--mut)}
+.chip.ok{background:var(--gbg);color:var(--gtx)}.chip.warn{background:var(--ybg);color:var(--ytx)}.chip.bad{background:var(--rbg);color:var(--rtx)}
+.btn{font:inherit;font-size:13px;font-weight:600;padding:9px 14px;border-radius:8px;border:1px solid var(--acc);background:var(--acc);color:#fff;cursor:pointer}
+.btn.sec{background:#fff;color:var(--acc)}.btn.ghost{background:#fff;color:var(--tx);border-color:#D5D9DE;font-weight:500}
+.btn.red{background:var(--rtx);border-color:var(--rtx)}
+.btn:disabled{opacity:.5;cursor:default}
+.filters{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+label.f{font-size:12px;color:var(--mut)}
+select,input[type=text],input[type=number],input[type=date],input:not([type]){font:inherit;font-size:13px;padding:7px 10px;border:1px solid #D5D9DE;border-radius:8px;background:#fff;color:var(--tx)}
+input.num{width:76px;text-align:right;padding:4px 6px;border-radius:6px}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%}
+th{font-size:11px;font-weight:600;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);background:#FAFAF9;white-space:nowrap}
+td{font-size:13px;padding:9px 12px;border-bottom:1px solid var(--line2);white-space:nowrap}
+td.r,th.r{text-align:right}td.c,th.c{text-align:center}
+tr.click{cursor:pointer}tr.click:hover td{background:#F7F8FA}
+.tag{font-size:12px;font-weight:600;padding:3px 8px;border-radius:6px;display:inline-block}
+.tag.rojo{background:var(--rbg);color:var(--rtx)}.tag.amarillo{background:var(--ybg);color:var(--ytx)}.tag.verde{background:var(--gbg);color:var(--gtx)}
+.tag.gray{background:#EEF0F2;color:var(--mut)}
+.bar{height:8px;background:var(--line2);border-radius:4px;margin-top:5px}.bar>div{height:8px;background:var(--acc);border-radius:4px}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.tabs button{font:inherit;font-size:14px;padding:10px 16px;border:none;border-bottom:3px solid transparent;background:transparent;color:var(--mut);cursor:pointer}
+.tabs button.on{border-bottom-color:var(--acc);color:var(--tx);font-weight:600}
+dl.kv{margin:0;display:grid;grid-template-columns:1fr auto;gap:9px 12px;font-size:13px}dl.kv dt{color:var(--mut)}dl.kv dd{margin:0;font-weight:600;text-align:right}
+.note{padding:10px 12px;border-radius:8px;background:var(--bg);font-size:13px}
+.muted{color:var(--mut)}.small{font-size:12px}
+td.zero{background:var(--rbg);color:var(--rtx);font-weight:700}td.ocd{box-shadow:inset 0 -3px 0 var(--acc)}
+.desc{max-width:280px;overflow:hidden;text-overflow:ellipsis}
+.empty{padding:40px;text-align:center;color:var(--mut)}
+.log{font-family:ui-monospace,Consolas,monospace;font-size:12px;max-height:260px;overflow:auto;white-space:pre-wrap;background:#FAFAF9;border-top:1px solid var(--line2);padding:12px 18px;margin:0}
+#toast{position:fixed;right:20px;bottom:20px;background:var(--nav);color:#fff;padding:12px 16px;border-radius:10px;font-size:13px;display:none;max-width:420px;z-index:9}
+.grid2{display:grid;grid-template-columns:1fr 110px 110px;gap:10px 14px;align-items:center;font-size:13px}
+.grid1{display:grid;grid-template-columns:1fr 110px;gap:10px 14px;align-items:center;font-size:13px}
+.busy{position:fixed;inset:0;background:rgba(245,245,243,.7);display:none;align-items:center;justify-content:center;z-index:8;font-weight:600}
+.pager{display:flex;justify-content:space-between;align-items:center;padding:12px 18px;flex-wrap:wrap;gap:8px;font-size:13px}
+@media (max-width:700px){#nav{max-width:none;flex-basis:100%}#main{padding:20px 16px}}
+</style>
+</head>
+<body>
+<div id="app">
+<nav id="nav" aria-label="Módulos">
+<div class="brand">Análisis Desviaciones</div>
+<div class="sub">PANISA · Walmart GT</div>
+<button data-view="resumen"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Resumen</button>
+<button data-view="detalle"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg>Detalle combinación</button>
+<button data-view="oc"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 2h9l5 5v15H6z"/><path d="M14 2v6h6M9 13h8M9 17h6"/></svg>OC Manuales</button>
+<button data-view="fcst"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 20h16M7 16V9M12 16V5M17 16v-4"/></svg>Ajuste FCST</button>
+<button data-view="carga"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg>Carga de datos</button>
+<button data-view="param"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>Parámetros</button>
+<div class="ver" id="ver"></div>
+</nav>
+<main id="main" aria-live="polite"></main>
+</div>
+<div class="busy" id="busy">Procesando…</div>
+<div id="toast" role="status"></div>
+<script>/*__XLSX__*/</script>
+<script>/*__CHART__*/</script>
+<script>/*__CORE__*/</script>
+<script>
+'use strict';
+const VERSION = 'V.1';
+const $ = s => document.querySelector(s);
+const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmt = (n, d = 0) => n == null || isNaN(n) ? '—' : Number(n).toLocaleString('es-GT', { minimumFractionDigits: d, maximumFractionDigits: d });
+const pct = (n, d = 0) => n == null || isNaN(n) ? '—' : fmt(n * 100, d) + '%';
+const fdate = s => { if (!s) return '—'; const d = Core.parseISO(s); return Core.DIA[d.getDay()] + ' ' + d.getDate() + '/' + (d.getMonth() + 1); };
+const wkTxt = L => { const w = Core.weekByLabel(L, S.params.fyOverrides); return 'S' + String(L % 100).padStart(2, '0') + ' (' + w.start.getDate() + '/' + (w.start.getMonth() + 1) + ')'; };
+const SRC = ['Venta Semanal', 'Devoluciones', 'Instock', 'FCST', 'RTL'];
+const KIND_TXT = { venta: 'Venta semanal', devoluciones: 'Devoluciones', instock: 'Instock 35 días', fcst: 'FCST', dss: 'RTL / DSS', fr: 'Fill Rate' };
+const ESTADO_TXT = { rojo: '● Rojo', amarillo: '▲ Amarillo', verde: '✓ Verde' };
+
+const S = {
+  dir: null, frDir: null, params: Core.defaultParams(), data: null, A: null, view: 'resumen',
+  filt: { canal: '', vendedor: '', formato: '', clave: '', estado: '', motivo: '', q: '', mant: false }, page: 1, sortKey: '',
+  detKey: null, ocEdits: {}, ocExtra: [], fcEdits: {}, ocTab: '37', ocCediDate: '', paramTab: 'general',
+  log: [], status: {}, solicitudes: [], track: [], cmpFreq: [], frSum: null, frWeek: null, chart: null
+};
+try { const d = JSON.parse(localStorage.getItem('ad_borrador') || '{}'); S.ocEdits = d.ocEdits || {}; S.ocExtra = d.ocExtra || []; S.fcEdits = d.fcEdits || {}; } catch (e) { }
+const saveDraft = () => { try { localStorage.setItem('ad_borrador', JSON.stringify({ ocEdits: S.ocEdits, ocExtra: S.ocExtra, fcEdits: S.fcEdits })); } catch (e) { } };
+
+function toast(msg, ms = 3500) { const t = $('#toast'); t.textContent = msg; t.style.display = 'block'; clearTimeout(toast.h); toast.h = setTimeout(() => t.style.display = 'none', ms); }
+function busy(on, txt) { const b = $('#busy'); b.textContent = txt || 'Procesando…'; b.style.display = on ? 'flex' : 'none'; }
+function log(m) { S.log.push(new Date().toLocaleTimeString() + '  ' + m); }
+
+/* ---------- IndexedDB: guarda los accesos a carpetas ---------- */
+const idb = {
+  open() { return new Promise((res, rej) => { const r = indexedDB.open('analisis-desviaciones', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); },
+  async get(k) { const db = await this.open(); return new Promise(res => { const r = db.transaction('kv').objectStore('kv').get(k); r.onsuccess = () => res(r.result); r.onerror = () => res(null); }); },
+  async set(k, v) { const db = await this.open(); return new Promise(res => { const t = db.transaction('kv', 'readwrite'); t.objectStore('kv').put(v, k); t.oncomplete = () => res(); }); }
+};
+
+/* ---------- archivos ---------- */
+async function sub(dir, name, create) { try { return await dir.getDirectoryHandle(name, { create: !!create }); } catch (e) { return null; } }
+async function subPath(dir, path, create) { let d = dir; for (const p of path.split('/').filter(Boolean)) { d = await sub(d, p, create); if (!d) return null; } return d; }
+async function readJSON(dir, path) {
+  const parts = path.split('/'); const name = parts.pop(); const d = await subPath(dir, parts.join('/'), false); if (!d) return null;
+  try { const f = await (await d.getFileHandle(name)).getFile(); return JSON.parse(await f.text()); } catch (e) { return null; }
+}
+async function writeFile(dir, path, data) {
+  const parts = path.split('/'); const name = parts.pop(); const d = await subPath(dir, parts.join('/'), true);
+  const fh = await d.getFileHandle(name, { create: true }); const w = await fh.createWritable(); await w.write(data); await w.close();
+}
+const writeJSON = (dir, path, obj) => writeFile(dir, path, JSON.stringify(obj));
+async function entries(dir) { const out = []; if (!dir) return out; for await (const [n, h] of dir.entries()) out.push([n, h]); return out; }
+async function xlsxFiles(dir) { return (await entries(dir)).filter(([n, h]) => h.kind === 'file' && /\.xls[xm]?$/i.test(n) && !n.startsWith('~$')).map(x => x[1]); }
+async function jsonNames(dir) { return (await entries(dir)).filter(([n, h]) => h.kind === 'file' && n.endsWith('.json')).map(x => x[0]).sort(); }
+async function readBook(fh) { const f = await fh.getFile(); const wb = XLSX.read(await f.arrayBuffer(), { type: 'array' }); return { wb, file: f }; }
+const sheetRows = (wb, name) => { const ws = wb.Sheets[name || wb.SheetNames[0]]; return ws ? XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null }) : null; };
+
+/* ---------- conexión de carpetas ---------- */
+const fsOK = 'showDirectoryPicker' in window;
+async function verify(h, mode) { if (!h) return false; const o = { mode }; if ((await h.queryPermission(o)) === 'granted') return true; return (await h.requestPermission(o)) === 'granted'; }
+async function connectProject() {
+  try {
+    const h = await window.showDirectoryPicker({ id: 'proyecto', mode: 'readwrite' });
+    const names = (await entries(h)).map(x => x[0]);
+    if (!names.includes('FCST') && !names.includes('Venta Semanal')) toast('Ojo: esta carpeta no tiene las subcarpetas FCST / Venta Semanal. Elige "IA Analisis Desviaciones".', 6000);
+    S.dir = h; await idb.set('dir', h); await actualizar(false);
+  } catch (e) { if (e.name !== 'AbortError') toast('No se pudo abrir la carpeta: ' + e.message); }
+}
+async function connectFr() {
+  try { const h = await window.showDirectoryPicker({ id: 'fillrate', mode: 'read' }); S.frDir = h; await idb.set('frDir', h); await actualizar(false); }
+  catch (e) { if (e.name !== 'AbortError') toast('No se pudo abrir la carpeta: ' + e.message); }
+}
+async function reopen() {
+  const ok1 = await verify(S.dir, 'readwrite'); if (S.frDir) await verify(S.frDir, 'read');
+  if (ok1) await actualizar(false); else toast('Sin permiso para la carpeta del proyecto.');
+}
+
+/* ---------- carga y proceso ---------- */
+function mergeParams(p) {
+  const d = Core.defaultParams(); if (!p) return d;
+  const out = Object.assign({}, d, p);
+  out.general = Object.assign({}, d.general, p.general || {});
+  for (const k of ['frObj', 'diasInv', 'leadTime', 'diasSeguridad']) out.general[k] = Object.assign({}, d.general[k], (p.general || {})[k] || {});
+  out.vendor = Object.assign({}, d.vendor, p.vendor || {});
+  out.poEvents = Object.assign({}, d.poEvents, p.poEvents || {});
+  return out;
+}
+async function actualizar(force) {
+  if (!S.dir) { render(); return; }
+  busy(true, 'Leyendo carpetas…'); S.log = [];
+  try {
+    const datos = await sub(S.dir, '_datos', true);
+    S.params = mergeParams(await readJSON(datos, 'parametros.json'));
+    const ov = S.params.fyOverrides;
+    let proc = force ? {} : (await readJSON(datos, 'procesados.json') || {});
+    /* maestros */
+    const masters = { items: {}, stores: {}, freq: {} };
+    const xy = await sub(S.dir, 'Excel YF');
+    const dit = (await xlsxFiles(xy)).filter(h => /data item/i.test(h.name));
+    if (dit.length) {
+      const { wb } = await readBook(dit[0]);
+      const parsed = Core.parseItemData(sheetRows(wb, wb.SheetNames.find(n => /item/i.test(n))) || []);
+      for (const k in parsed) {
+        const cur = S.params.items[k];
+        if (!cur) S.params.items[k] = Object.assign(parsed[k], { vida: null });
+        else { if (!cur.itemD) cur.itemD = parsed[k].itemD; if (!cur.itemC) cur.itemC = parsed[k].itemC; }
+      }
+      masters.stores = Core.parseStrData(sheetRows(wb, wb.SheetNames.find(n => /str/i.test(n))) || []);
+      log('Maestro de items y tiendas: ' + dit[0].name + ' · ' + Object.keys(parsed).length + ' claves, ' + Object.keys(masters.stores).length + ' tiendas');
+    } else log('⚠ No encontré "Data Item y Tienda" en Excel YF');
+    masters.items = S.params.items;
+    const fqd = await sub(S.dir, 'Frecuencias');
+    const fqFiles = []; for (const h of await xlsxFiles(fqd)) fqFiles.push({ h, f: await h.getFile() });
+    fqFiles.sort((a, b) => b.f.lastModified - a.f.lastModified);
+    if (fqFiles.length) { const { wb } = await readBook(fqFiles[0].h); masters.freq = Core.parseFrecuencias(sheetRows(wb)); log('Frecuencias: ' + fqFiles[0].h.name + ' · ' + Object.keys(masters.freq).length + ' tiendas'); S.status.freq = { name: fqFiles[0].h.name, date: fqFiles[0].f.lastModified }; }
+    else log('⚠ No hay archivo en la carpeta Frecuencias');
+    /* reportes Retail Link */
+    let nuevos = 0;
+    for (const folder of SRC) {
+      const d = await sub(S.dir, folder);
+      if (!d) { log('⚠ Falta la carpeta ' + folder); continue; }
+      for (const h of await xlsxFiles(d)) {
+        const f = await h.getFile(); const key = folder + '/' + h.name + '|' + f.size + '|' + f.lastModified;
+        if (proc[key]) continue;
+        busy(true, 'Leyendo ' + h.name + '…');
+        let rows;
+        try { const { wb } = await readBook(h); rows = sheetRows(wb); } catch (e) { log('✗ ' + h.name + ': no se pudo leer (' + e.message + ')'); continue; }
+        const kind = Core.detectReport(rows);
+        let info = null;
+        if (kind === 'venta') { const p = Core.parseVenta(rows, ov); await writeJSON(datos, 'venta/' + p.week + '.json', p); info = 'semana ' + p.week; }
+        else if (kind === 'devoluciones') { const p = Core.parseDevoluciones(rows, ov); await writeJSON(datos, 'devoluciones/' + p.week + '.json', p); info = 'semana ' + p.week; }
+        else if (kind === 'instock') { const p = Core.parseInstock(rows); await writeJSON(datos, 'instock/' + stamp(p.requested) + '.json', p); info = p.desde + ' a ' + p.hasta; }
+        else if (kind === 'fcst') { const p = Core.parseFcst(rows, ov); await writeJSON(datos, 'fcst/' + stamp(p.requested) + '.json', p); info = 'solicitado ' + new Date(p.requested).toLocaleString(); }
+        else if (kind === 'dss') { const p = Core.parseDss(rows); await writeJSON(datos, 'dss/' + stamp(p.requested) + '.json', p); info = p.rows.length + ' combinaciones'; }
+        else { log('⚠ ' + folder + '/' + h.name + ': no reconozco el reporte'); proc[key] = { kind: null }; continue; }
+        proc[key] = { kind, info, at: Date.now() }; nuevos++;
+        log('✓ ' + KIND_TXT[kind] + ' · ' + h.name + ' · ' + info);
+      }
+    }
+    /* Fill Rate */
+    const cur = Core.weekInfo(new Date(), ov).label;
+    const need = []; for (let n = 1; n <= 6; n++) need.push(Core.weekAdd(cur, -n, ov));
+    if (S.frDir) {
+      const ok = (await S.frDir.queryPermission({ mode: 'read' })) === 'granted';
+      if (ok) {
+        const have = new Set((await jsonNames(await sub(datos, 'fr', true))).map(n => +n.replace('.json', '')));
+        const cands = [];
+        const scan = async (d) => { for (const [n, h] of await entries(d)) { if (h.kind === 'directory' && /^\d{4}$/.test(n)) await scan(h); else if (h.kind === 'file') { const m = n.match(/^FR SMW (\d{6}) Combinacion\.xlsx$/i); if (m) cands.push([+m[1], h]); } } };
+        await scan(S.frDir);
+        for (const [L, h] of cands) {
+          if (!need.includes(L) || (have.has(L) && !force)) continue;
+          busy(true, 'Leyendo Fill Rate ' + L + '…');
+          try { const { wb } = await readBook(h); const p = Core.parseFr(sheetRows(wb, 'DSS') || [], L, S.params); await writeJSON(datos, 'fr/' + L + '.json', p); log('✓ Fill Rate semana ' + L); nuevos++; }
+          catch (e) { log('✗ Fill Rate ' + L + ': ' + e.message); }
+        }
+      } else log('⚠ Falta permiso para la carpeta de Fill Rate (usa "Reabrir carpetas")');
+    } else log('⚠ Carpeta de Fill Rate no conectada');
+    await writeJSON(datos, 'procesados.json', proc);
+    /* historia guardada */
+    busy(true, 'Calculando…');
+    const load = async (folder, n, numeric) => { const d = await sub(datos, folder, true); const names = await jsonNames(d); const pick = names.slice(-n); const out = []; for (const nm of pick) { const j = await readJSON(d, nm); if (j) out.push([nm.replace('.json', ''), j]); } return out; };
+    const venta = Object.fromEntries((await load('venta', 10)).map(([k, v]) => [+k, v]));
+    const dev = Object.fromEntries((await load('devoluciones', 10)).map(([k, v]) => [+k, v]));
+    const fr = Object.fromEntries((await load('fr', 6)).map(([k, v]) => [+k, v]));
+    const fcstSnaps = (await load('fcst', 6)).map(x => x[1]);
+    const dss = ((await load('dss', 1))[0] || [])[1] || null;
+    const instock = ((await load('instock', 1))[0] || [])[1] || null;
+    S.data = { params: S.params, masters, venta, dev, fr, fcstSnaps, dss, instock };
+    S.status.venta = Object.keys(venta).map(Number).sort(); S.status.dev = Object.keys(dev).map(Number).sort(); S.status.fr = Object.keys(fr).map(Number).sort();
+    S.status.fcst = fcstSnaps.map(s => s.requested); S.status.dss = dss && dss.requested; S.status.instock = instock && (instock.desde + ' a ' + instock.hasta);
+    S.status.proc = proc;
+    /* solicitudes guardadas */
+    const sd = await sub(datos, 'solicitudes', true); S.solicitudes = [];
+    for (const nm of (await jsonNames(sd)).slice(-30)) { const j = await readJSON(sd, nm); if (j) S.solicitudes.push(j); }
+    await writeJSON(datos, 'parametros.json', S.params);
+    analizar();
+    log('Listo · ' + nuevos + ' archivo(s) nuevo(s)');
+    if (nuevos) toast(nuevos + ' archivo(s) nuevo(s) procesado(s)');
+  } catch (e) { console.error(e); log('✗ Error: ' + e.message); toast('Error: ' + e.message, 6000); }
+  busy(false); render();
+}
+function stamp(iso) { const d = iso ? new Date(iso) : new Date(); return Core.ymd(d) + '_' + String(d.getHours()).padStart(2, '0') + String(d.getMinutes()).padStart(2, '0'); }
+function analizar() {
+  if (!S.data) return;
+  S.data.params = S.params;
+  S.A = Core.analyze(S.data);
+  const frL = Object.keys(S.data.fr).map(Number).sort((a, b) => b - a);
+  S.frWeek = frL[0] || null; S.frSum = S.frWeek ? Core.frSummary(S.data.fr[S.frWeek], S.params) : null;
+  S.cmpFreq = Core.compareFrecuencias(S.data.masters.freq, S.data.fr, S.params);
+  S.track = Core.trackOC(S.solicitudes, S.data.fr);
+  if (!S.ocCediDate) S.ocCediDate = Core.ymd(Core.addDays(Core.parseISO(S.A.t0), S.params.general.cancelCedi));
+}
+async function saveParams(reload) {
+  if (!S.dir) { toast('Conecta la carpeta del proyecto para guardar.'); return; }
+  const datos = await sub(S.dir, '_datos', true); await writeJSON(datos, 'parametros.json', S.params);
+  if (reload) await actualizar(false); else { analizar(); render(); }
+  toast('Parámetros guardados');
+}
+
+/* ---------- filtros ---------- */
+function filtered() {
+  if (!S.A) return [];
+  const f = S.filt, q = f.q.trim().toLowerCase();
+  return S.A.combos.filter(c =>
+    (!f.canal || String(c.st) === f.canal) && (!f.vendedor || c.vendedor === f.vendedor) && (!f.formato || c.formato === f.formato) &&
+    (!f.clave || c.clave === f.clave) && (!f.estado || c.estado === f.estado) && (!f.motivo || c.motivo === f.motivo) && (!f.mant || c.mant) &&
+    (!q || String(c.s).includes(q) || (c.name || '').toLowerCase().includes(q) || String(c.item).includes(q) || c.clave.toLowerCase().includes(q)));
+}
+const uniq = (arr) => Array.from(new Set(arr.filter(Boolean))).sort();
+function filterBar() {
+  const C = S.A ? S.A.combos : [], f = S.filt;
+  const sel = (k, lbl, opts, all) => `<label class="f">${lbl} <select data-filt="${k}"><option value="">${all}</option>${opts.map(o => `<option value="${esc(o[0])}" ${String(f[k]) === String(o[0]) ? 'selected' : ''}>${esc(o[1])}</option>`).join('')}</select></label>`;
+  return `<div class="filters">
+  ${sel('canal', 'Canal', [['37', 'Directas'], ['33', 'CEDI']], 'Todos')}
+  ${sel('estado', 'Estado', [['rojo', 'Rojo'], ['amarillo', 'Amarillo'], ['verde', 'Verde']], 'Todos')}
+  ${sel('motivo', 'Motivo', uniq(C.map(c => c.motivo)).map(m => [m, m]), 'Todos')}
+  ${sel('vendedor', 'Vendedor', uniq(C.map(c => c.vendedor)).map(m => [m, m]), 'Todos')}
+  ${sel('formato', 'Formato', uniq(C.map(c => c.formato)).map(m => [m, m]), 'Todos')}
+  ${sel('clave', 'Clave', uniq(C.map(c => c.clave)).map(m => [m, m]), 'Todas')}
+  <input type="text" data-filt="q" aria-label="Buscar tienda o item" placeholder="Buscar tienda o item…" value="${esc(f.q)}" style="min-width:190px">
+  <label class="f"><input type="checkbox" data-filt="mant" ${f.mant ? 'checked' : ''}> Solo mantenimiento Walmart</label>
+  </div>`;
+}
+
+/* ---------- vistas ---------- */
+function render() {
+  document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('on', b.dataset.view === S.view));
+  $('#ver').textContent = VERSION + (S.A ? ' · ' + wkTxt(S.A.week) : '');
+  if (S.chart) { S.chart.destroy(); S.chart = null; }
+  const m = $('#main');
+  if (!fsOK) { m.innerHTML = `<h1>Análisis Desviaciones</h1><div class="card pad">Este navegador no permite trabajar con carpetas. Abre la app en <b>Google Chrome</b> o <b>Microsoft Edge</b>.</div>`; return; }
+  if (!S.A && S.view !== 'param' && S.view !== 'carga') { m.innerHTML = vInicio(); return; }
+  m.innerHTML = ({ resumen: vResumen, detalle: vDetalle, oc: vOC, fcst: vFcst, carga: vCarga, param: vParam })[S.view]();
+  if (S.view === 'detalle') drawChart();
+}
+function vInicio() {
+  return `<div><div class="eyebrow">${VERSION}</div><h1>Análisis Desviaciones</h1></div>
+  <div class="card pad" style="max-width:720px">
+  <h2>Conecta tus carpetas</h2>
+  <p class="muted">La app lee los reportes directamente desde tu computadora. Ningún dato sale de tu equipo.</p>
+  <ol style="line-height:1.8;padding-left:20px">
+  <li>Carpeta del proyecto: <b>IA Analisis Desviaciones</b> (con FCST, Venta Semanal, RTL, etc.).</li>
+  <li>Carpeta de Fill Rate: <b>DataBase\\Fill Rate\\Por Combinacion</b>.</li></ol>
+  <div class="chips">
+  ${S.dir ? `<button class="btn" data-act="reopen">Reabrir carpetas</button><span class="chip">${esc(S.dir.name)}</span>` : `<button class="btn" data-act="connect">Elegir carpeta del proyecto</button>`}
+  <button class="btn sec" data-act="connectFr">${S.frDir ? 'Cambiar' : 'Elegir'} carpeta de Fill Rate</button>${S.frDir ? `<span class="chip">${esc(S.frDir.name)}</span>` : ''}
+  </div></div>`;
+}
+function statusChips() {
+  const st = S.status, A = S.A, chips = [];
+  const lastV = st.venta && st.venta[st.venta.length - 1];
+  const exp = Core.weekAdd(A.week, -1, S.params.fyOverrides);
+  chips.push(lastV === exp ? `<span class="chip ok">✓ Venta ${lastV}</span>` : `<span class="chip warn">! Venta ${lastV || '—'} (falta ${exp})</span>`);
+  const lastD = st.dev && st.dev[st.dev.length - 1];
+  chips.push(lastD === exp ? `<span class="chip ok">✓ Devoluciones ${lastD}</span>` : `<span class="chip warn">! Devoluciones ${lastD || '—'}</span>`);
+  const fc = st.fcst && st.fcst.length ? new Date(st.fcst[st.fcst.length - 1]) : null;
+  const fcOk = fc && (Date.now() - fc) / 864e5 <= 8;
+  chips.push(`<span class="chip ${fcOk ? 'ok' : 'warn'}">${fcOk ? '✓' : '!'} FCST ${fc ? fc.toLocaleDateString('es-GT') : '—'}</span>`);
+  chips.push(`<span class="chip ${S.frWeek === exp || S.frWeek === Core.weekAdd(exp, -1, S.params.fyOverrides) ? 'ok' : 'warn'}">${S.frWeek ? '✓' : '!'} Fill Rate ${S.frWeek || '—'}</span>`);
+  chips.push(`<span class="chip ${st.dss ? 'ok' : 'warn'}">${st.dss ? '✓' : '!'} RTL ${st.dss ? new Date(st.dss).toLocaleDateString('es-GT') : '—'}</span>`);
+  return chips.join('');
+}
+function vResumen() {
+  const A = S.A, all = A.combos, L = filtered();
+  const n = e => L.filter(c => c.estado === e).length;
+  const tot = L.length || 1;
+  const fr = t => { const x = (S.frSum || []).find(o => o.t === t && o.cls === 'auto'); return x && x.ord ? x.rec / x.ord : null; };
+  const frm = t => { const x = (S.frSum || []).find(o => o.t === t && o.cls !== 'auto' && o.cls !== 'otra'); return x && x.ord ? x.rec / x.ord : null; };
+  const G = S.params.general;
+  const mot = {}; L.filter(c => c.estado !== 'verde').forEach(c => mot[c.motivo] = (mot[c.motivo] || 0) + 1);
+  const motArr = Object.entries(mot).sort((a, b) => b[1] - a[1]); const motMax = motArr.length ? motArr[0][1] : 1;
+  const alert = L.filter(c => c.estado !== 'verde');
+  const per = 25, pages = Math.max(1, Math.ceil(alert.length / per)); S.page = Math.min(S.page, pages);
+  const rows = alert.slice((S.page - 1) * per, S.page * per);
+  /* venta vs FCST última semana */
+  const lw = A.ventaWeeks[0]; let vt = 0, ft = 0; if (lw) for (const c of all) { const h = c.hist.find(x => x.label === lw); if (h) { vt += h.pos; if (h.fcst != null) ft += h.fcst; } }
+  /* próximos eventos */
+  const evs = []; for (let i = 0; i < 8; i++) { const Lb = Core.weekAdd(A.week, i, S.params.fyOverrides); const u = Core.weekUplift(Lb, S.params.eventos, S.params.fyOverrides); if (u.pct > 0) evs.push([Lb, u]); }
+  const mant = all.filter(c => c.mant).length;
+  return `
+  <div class="between"><div><div class="eyebrow">Semana Walmart ${A.week} · ${fdate(A.weekStart)} a ${fdate(A.weekEnd)} · inventario al ${fdate(A.t0)}</div><h1>Resumen semanal</h1></div>
+  <div class="chips">${statusChips()}<button class="btn" data-act="refresh">Actualizar datos</button></div></div>
+  ${filterBar()}
+  <div class="kpis">
+   <div class="card kpi"><div class="l">Combinaciones activas</div><div class="v">${fmt(L.length)}</div><div class="s">${fmt(L.filter(c => c.st === 37).length)} Directas · ${fmt(L.filter(c => c.st === 33).length)} CEDI</div></div>
+   <div class="card kpi red"><div class="l">● Rojo · requiere OC manual</div><div class="v" style="color:var(--rtx)">${fmt(n('rojo'))}</div><div class="s">${fmt(L.filter(c => c.estado === 'rojo').reduce((a, c) => a + c.lostPost, 0))} u en riesgo después de la próxima entrega</div></div>
+   <div class="card kpi yel"><div class="l">▲ Amarillo · revisar FCST</div><div class="v" style="color:var(--ytx)">${fmt(n('amarillo'))}</div><div class="s">${fmt(L.filter(c => Object.keys(c.fcstSug).length).length)} con ajuste de FCST sugerido</div></div>
+   <div class="card kpi grn"><div class="l">✓ Verde · en parámetros</div><div class="v" style="color:var(--gtx)">${fmt(n('verde'))}</div><div class="s">${pct(n('verde') / tot)} del total</div></div>
+   <div class="card kpi"><div class="l">Fill rate ${S.frWeek || ''} · objetivo ${G.frObj[37]}%</div>
+    ${[[37, 'Directas'], [33, 'CEDI']].map(([t, nm]) => { const v = fr(t); const bad = v != null && v * 100 < G.frObj[t]; return `<div style="font-size:15px;font-weight:600;margin-top:10px;display:flex;justify-content:space-between"><span>${nm}</span><span style="${bad ? 'color:var(--rtx)' : ''}">${pct(v)}</span></div><div class="bar" style="height:6px"><div style="height:6px;width:${Math.round((v || 0) * 100)}%;background:${bad ? 'var(--r)' : 'var(--acc)'}"></div></div>`; }).join('')}
+    <div class="s">OC manuales Walmart: Directas ${pct(frm(37))} · CEDI ${pct(frm(33))}</div></div>
+  </div>
+  <div class="row">
+    <div class="card pad" style="flex:1 1 280px;min-width:0"><h2 style="margin-bottom:14px">Motivo de las alertas</h2>
+     <div style="display:flex;flex-direction:column;gap:12px;font-size:13px">${motArr.map(([m, v]) => `<div><a data-act="fmot" data-m="${esc(m)}" style="display:flex;justify-content:space-between;color:inherit"><span>${esc(m)}</span><b>${v}</b></a><div class="bar"><div style="width:${Math.round(v / motMax * 100)}%"></div></div></div>`).join('') || '<span class="muted">Sin alertas</span>'}</div></div>
+    <div class="card pad" style="flex:1 1 280px;min-width:0"><h2>Venta vs FCST · ${lw ? wkTxt(lw) : '—'}</h2>
+     <div style="font-size:13px;margin-top:10px;display:grid;grid-template-columns:1fr auto;gap:6px"><span class="muted">Venta real</span><b>${fmt(vt)}</b><span class="muted">FCST de esa semana</span><b>${ft ? fmt(ft) : 'sin dato'}</b><span class="muted">Diferencia</span><b>${ft ? pct((vt - ft) / ft, 1) : '—'}</b></div>
+     <div class="small muted" style="margin-top:8px">Todas las combinaciones, sin filtros. El FCST histórico se guarda desde la primera carga.</div></div>
+    <div class="card pad" style="flex:1 1 280px;min-width:0"><h2>Próximos eventos</h2>${evs.length ? evs.map(([Lb, u]) => `<div style="display:flex;justify-content:space-between;font-size:13px;margin-top:10px"><span>${wkTxt(Lb)} · ${esc(u.nombres.join(', '))}</span><b>+${Math.round(u.pct * 100)}%</b></div>`).join('') : '<div class="small muted" style="margin-top:8px">Sin eventos en las próximas 8 semanas.</div>'}</div>
+    ${mant ? `<div class="card pad" style="flex:1 1 280px;min-width:0"><h2>Mantenimiento Walmart</h2><div class="small" style="margin-top:8px">${mant} combinaciones con Item Type distinto al de la tienda. La app las regulariza según STR TYPE.</div><a data-act="fmant" style="display:inline-block;margin-top:10px;font-size:13px;font-weight:600">Ver listado ›</a></div>` : ''}
+  </div>
+  <section class="card">
+    <div class="between pad" style="align-items:center"><h2>Prioridad · combinaciones con alerta</h2><span class="small muted">${fmt(alert.length)} alertas · ordenado por unidades en riesgo</span></div>
+    <div class="tw"><table><thead><tr><th>Estado</th><th>Tienda</th><th>Clave</th><th>Canal</th><th class="r">Demanda/sem</th><th class="r">FCST/sem</th><th class="r">Inv.</th><th>Quiebre</th><th class="r">U. en riesgo</th><th>Motivo</th></tr></thead>
+    <tbody>${rows.map(c => `<tr class="click" data-det="${esc(c.key)}" tabindex="0"><td><span class="tag ${c.estado}">${ESTADO_TXT[c.estado]}</span></td><td>${c.s} ${esc(c.name)}</td><td>${esc(c.clave)}${c.mant ? ' <span class="tag gray" title="Walmart reporta otro Item Type">mant.</span>' : ''}</td><td>${c.canal}</td><td class="r">${fmt(c.dem)}</td><td class="r">${fmt(c.fcst4)}</td><td class="r">${fmt(c.oh)}</td><td>${c.quiebre ? fdate(c.quiebre) : '—'}</td><td class="r">${fmt(c.lost7)}</td><td>${esc(c.motivo)}</td></tr>`).join('') || `<tr><td colspan="10" class="empty">Sin alertas con estos filtros.</td></tr>`}</tbody></table></div>
+    <div class="pager"><span class="muted">Página ${S.page} de ${pages}</span><span class="chips"><button class="btn ghost" data-act="pg" data-d="-1" ${S.page <= 1 ? 'disabled' : ''}>‹ Anterior</button><button class="btn ghost" data-act="pg" data-d="1" ${S.page >= pages ? 'disabled' : ''}>Siguiente ›</button></span></div>
+   </section>
+  `;
+}
+function curDet() {
+  const L = filtered(); let c = S.A.combos.find(x => x.key === S.detKey);
+  if (!c) { c = L[0] || S.A.combos[0]; S.detKey = c && c.key; }
+  return { c, L };
+}
+function vDetalle() {
+  const { c, L } = curDet(); if (!c) return '<div class="empty">Sin combinaciones.</div>';
+  const idx = L.findIndex(x => x.key === c.key);
+  const it = S.params.items[c.clave] || {};
+  const so = S.params.stores[c.s] || {};
+  const diasTxt = c.st === 33 ? 'CEDI lun a sáb' : 'Entregas ' + c.dias.map((v, d) => v ? Core.DIA[d] : null).filter(Boolean).join(' · ') + (c.sinFrec ? ' (sin frecuencia, valor por defecto)' : '');
+  const ed = S.ocEdits[c.key] || {};
+  const inOC = c.estado === 'rojo' ? ed.incl !== false : !!S.ocExtra.find(x => x.key === c.key);
+  const proj = c.proj.slice(0, 14);
+  const projRow = (lbl, f, cls) => `<tr><td style="text-align:left" class="${cls || 'muted'}">${lbl}</td>${proj.map(p => f(p)).join('')}</tr>`;
+  return `
+  <div class="between"><div><div class="eyebrow"><a data-view="resumen">Resumen</a> › Detalle de combinación ${idx >= 0 ? '· ' + (idx + 1) + ' de ' + L.length : ''}</div>
+  <h1>${c.s} ${esc(c.name)} · ${esc(c.clave)} ${esc(c.desc)}</h1>
+  <div class="small muted" style="margin-top:6px">Item ${c.item} · ${c.canal} · Vendor ${c.st === 33 ? S.params.vendor.base9 + c.seq : S.params.vendor.base9 + '0'} · ${c.vendedor ? 'Vendedor: ' + esc(c.vendedor) + ' · ' : ''}${diasTxt}${c.mant ? ' · Walmart reporta item ' + c.dssItems.join(', ') : ''}</div></div>
+  <div class="chips"><span class="tag ${c.estado}" style="font-size:13px;padding:6px 12px">${ESTADO_TXT[c.estado]}${c.quiebre ? ' · quiebre ' + fdate(c.quiebre) : ''}</span>
+  <button class="btn ghost" data-act="nav" data-d="-1" aria-label="Combinación anterior" ${idx <= 0 ? 'disabled' : ''}>‹</button><button class="btn ghost" data-act="nav" data-d="1" aria-label="Combinación siguiente" ${idx < 0 || idx >= L.length - 1 ? 'disabled' : ''}>›</button>
+  <select aria-label="Ir a combinación" data-act="goto" style="max-width:260px">${L.slice(0, 400).map(x => `<option value="${esc(x.key)}" ${x.key === c.key ? 'selected' : ''}>${x.s} ${esc(x.name)} · ${esc(x.clave)}</option>`).join('')}</select></div></div>
+  <div class="row">
+   <section class="card pad" style="flex:3 1 620px;min-width:0"><div class="between" style="align-items:center"><h2>Venta real vs FCST · historia y próximas semanas</h2><span class="small muted">Barras: venta · Línea: FCST Walmart · Punteada: demanda estimada (con eventos)</span></div>
+   <div style="position:relative;height:300px;margin-top:12px"><canvas id="chart" role="img" aria-label="Venta semanal, forecast de Walmart y demanda estimada"></canvas></div></section>
+   <section class="card pad" style="flex:1 1 280px;min-width:0"><h2 style="margin-bottom:12px">Datos de la combinación</h2>
+   <dl class="kv">
+   <dt>Demanda estimada/sem</dt><dd>${fmt(c.dem, 1)} u</dd><dt class="small">Fuente</dt><dd class="small" style="font-weight:400">${esc(c.demFuente)}</dd>
+   <dt>FCST prom. próximas 4 sem</dt><dd>${fmt(c.fcst4, 1)} u</dd>
+   <dt>Demanda vs FCST</dt><dd style="${c.sesgo ? 'color:var(--rtx)' : ''}">${c.fcst4 ? pct((c.dem - c.fcst4) / c.fcst4) : '—'}</dd>
+   <dt>Inventario en tienda</dt><dd>${fmt(c.oh)} u</dd><dt>Tránsito · bodega · en orden</dt><dd>${fmt(c.it)} · ${fmt(c.iw)} · ${fmt(c.oo)}</dd>
+   <dt>Cobertura</dt><dd>${c.cov == null ? '—' : fmt(c.cov, 1) + ' días'}</dd>
+   <dt>Fill rate 4 sem (auto)</dt><dd>${pct(c.frA)}</dd><dt>Fill rate OC manuales</dt><dd>${pct(c.frM)}</dd>
+   <dt>Devolución 4 sem</dt><dd>${fmt(c.dev4)} u · ${pct(c.devPct)}</dd>
+   <dt>Días con venta 0 · última sem</dt><dd>${c.zeroDays} de 7</dd>
+   <dt>Vida útil</dt><dd>${it.vida || S.params.general.vidaUtil} días</dd></dl>
+   <div class="note" style="margin-top:14px"><b>Motivo:</b> ${esc(c.motivo || 'Sin alerta')}${c.sesgoTxt ? ' · ' + esc(c.sesgoTxt) : ''}${c.devAlta ? ' · devolución alta' : ''}</div></section>
+  </div>
+  <section class="card"><div class="between pad" style="align-items:center"><h2>Proyección diaria de inventario</h2><span class="small muted">Venta esperada con el patrón por día · reposición de Walmart según su FCST × fill rate · subrayado: día en que llegaría una OC manual</span></div>
+  <div class="tw"><table><thead><tr><th>Concepto</th>${proj.map(p => `<th class="c">${fdate(p.date)}</th>`).join('')}</tr></thead><tbody>
+  ${projRow('Inventario inicial', p => `<td class="c">${fmt(p.ini)}</td>`)}
+  ${projRow('Entrega esperada', p => `<td class="c ${p.oc ? 'ocd' : ''}">${p.del ? fmt(p.del) : '—'}</td>`)}
+  ${projRow('Venta esperada', p => `<td class="c">${fmt(p.dem, 1)}</td>`)}
+  ${projRow('<b>Inventario final</b>', p => `<td class="c ${p.fin <= 0 && p.dem > 0 ? 'zero' : ''}">${fmt(p.fin)}</td>`, '')}
+  ${projRow('Venta en riesgo', p => `<td class="c">${p.lost >= 0.5 ? fmt(p.lost, 1) : '—'}</td>`)}
+  </tbody></table></div></section>
+  <div class="chips">
+   ${c.estado === 'rojo' || inOC ? `<button class="btn ${inOC ? 'ghost' : 'red'}" data-act="ocToggle" data-k="${esc(c.key)}">${inOC ? 'Quitar de OC manual' : 'Agregar a OC manual'} · ${fmt(ed.qty != null ? ed.qty : c.ocQty || Math.ceil(c.demD * 3))} u · cancel ${fdate(ed.cancel || c.ocCancel || c.ocDate)}</button>` : `<button class="btn sec" data-act="ocToggle" data-k="${esc(c.key)}">Agregar a OC manual</button>`}
+   ${Object.keys(c.fcstSug).length ? `<button class="btn sec" data-act="fcToggle" data-k="${esc(c.key)}">${(S.fcEdits[c.key] || {}).incl === false ? 'Incluir en' : 'Quitar de'} ajuste FCST · ${fmt(c.fcst4)} → ${fmt(c.dem)} u/sem</button>` : ''}
+  </div>`;
+}
+function drawChart() {
+  const { c } = curDet(); const el = $('#chart'); if (!c || !el || typeof Chart === 'undefined') return;
+  const H = c.hist, F = S.A.fcstWeeks.slice(0, 6);
+  const labels = H.map(h => 'S' + String(h.label % 100).padStart(2, '0')).concat(F.map(L => 'S' + String(L % 100).padStart(2, '0') + (L === S.A.week ? ' hoy' : '')));
+  const nH = H.length;
+  const venta = H.map(h => h.pos).concat(F.map(() => null));
+  const fc = H.map(h => h.fcst).concat(F.map(L => c.fcstW[L]));
+  const up = Object.fromEntries(c.uplifts.map(u => [u.L, u.pct]));
+  const dem = H.map((h, i) => i === nH - 1 ? h.pos : null).concat(F.map(L => Math.round(c.dem * (1 + (up[L] || 0)))));
+  S.chart = new Chart(el, {
+    data: { labels, datasets: [
+      { type: 'bar', label: 'Venta real', data: venta, backgroundColor: '#9AA7B8', borderRadius: 3, order: 3 },
+      { type: 'line', label: 'FCST Walmart', data: fc, borderColor: '#2F3A4A', backgroundColor: '#2F3A4A', borderWidth: 2.5, pointRadius: 3, spanGaps: true, order: 1 },
+      { type: 'line', label: 'Demanda estimada', data: dem, borderColor: '#D98A00', backgroundColor: '#D98A00', borderDash: [6, 5], borderWidth: 2.5, pointRadius: 2, spanGaps: true, order: 2 }] },
+    options: { maintainAspectRatio: false, animation: false, interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 12 } } }, tooltip: { callbacks: { label: x => x.dataset.label + ': ' + fmt(x.parsed.y, 1) } } },
+      scales: { y: { beginAtZero: true, grid: { color: '#EEF0F2' }, ticks: { font: { size: 11 } } }, x: { grid: { display: false }, ticks: { font: { size: 11 } } } } }
+  });
+}
+/* ---------- OC manuales ---------- */
+function ocLines() {
+  const A = S.A, out = [];
+  const add = (c, extra) => {
+    const e = S.ocEdits[c.key] || {};
+    const incl = extra ? true : e.incl !== false;
+    const qty = e.qty != null ? e.qty : (c.ocQty || Math.max(c.vnpk || 1, Math.ceil(c.demD * 3)));
+    const cancel = c.st === 33 ? S.ocCediDate : (e.cancel || c.ocCancel || c.ocDate);
+    const tab = c.st === 33 ? '33-' + (c.seq || 1) : '37';
+    out.push({ c, incl, qty, cancel, tab, extra: !!extra });
+  };
+  for (const c of A.combos) if (c.estado === 'rojo') add(c, false);
+  for (const x of S.ocExtra) { const c = A.combos.find(k => k.key === x.key); if (c && c.estado !== 'rojo') add(c, true); }
+  return out.sort((a, b) => a.c.s - b.c.s || String(a.c.item).localeCompare(String(b.c.item)));
+}
+function vOC() {
+  const lines = ocLines(), tab = S.ocTab;
+  const tl = lines.filter(l => l.tab === tab), act = tl.filter(l => l.incl);
+  const tabs = [['37', 'Directas · 810'], ['33-1', 'CEDI · 811'], ['33-2', 'CEDI · 812']];
+  const V = S.params.vendor;
+  const head = tab === '37'
+    ? '<th></th><th>Store Nbr</th><th>Nombre de tienda</th><th>Item Nbr</th><th>Código</th><th>Descripción</th><th class="r">OC sugerido</th><th>Cancel date</th><th class="r">U. en riesgo</th><th>Motivo</th>'
+    : '<th></th><th>Tienda</th><th>Nombre</th><th>Item Nbr</th><th>Clave</th><th>Descripción</th><th class="r">OC</th><th class="r">U. en riesgo</th><th>Motivo</th>';
+  const row = l => { const c = l.c, k = esc(c.key);
+    const chk = `<td><input type="checkbox" data-oc-incl="${k}" ${l.incl ? 'checked' : ''} aria-label="Incluir ${c.s} ${esc(c.clave)}"></td>`;
+    const q = `<td class="r"><input class="num" type="number" min="0" data-oc-qty="${k}" value="${l.qty}" aria-label="Cantidad ${c.s} ${esc(c.clave)}"></td>`;
+    const mot = `<td class="small muted">${l.extra ? 'Agregada manualmente' : esc(c.motivo)}</td>`;
+    const risk = `<td class="r">${fmt(c.lostPost)}</td>`;
+    return tab === '37'
+      ? `<tr style="${l.incl ? '' : 'opacity:.45'}">${chk}<td>${c.s}</td><td>${esc(c.name)}</td><td>${c.item}</td><td>${esc(c.codigoOC)}</td><td class="desc" title="${esc(c.descOC)}">${esc(c.descOC)}</td>${q}<td><input type="date" data-oc-cancel="${k}" value="${l.cancel || ''}" aria-label="Cancel date ${c.s}"></td>${risk}${mot}</tr>`
+      : `<tr style="${l.incl ? '' : 'opacity:.45'}">${chk}<td>${c.s}</td><td>${esc(c.dssName)}</td><td>${c.item}</td><td>${esc(c.clave)} CD</td><td class="desc" title="${esc(c.desc)}">${esc(c.desc)}</td>${q}${risk}${mot}</tr>`;
+  };
+  const tr = S.track.slice().reverse();
+  return `
+  <div class="between"><div><div class="eyebrow">Inventario al ${fdate(S.A.t0)} · proyección de ${S.params.general.horizonteRojo} días después de la próxima entrega</div><h1>OC Manuales de refuerzo</h1></div>
+  <div class="chips"><button class="btn ghost" data-act="ocReset">Restablecer sugerencias</button><button class="btn" data-act="ocExport">Exportar ${tabs.find(t => t[0] === tab)[1]}</button></div></div>
+  <div class="tabs" role="tablist">${tabs.map(([t, n]) => `<button role="tab" aria-selected="${t === tab}" class="${t === tab ? 'on' : ''}" data-octab="${t}">${n} <span class="small muted">${lines.filter(l => l.tab === t && l.incl).length} líneas</span></button>`).join('')}</div>
+  <div class="kpis">
+   <div class="card kpi"><div class="l">Tiendas</div><div class="v">${new Set(act.map(l => l.c.s)).size}</div></div>
+   <div class="card kpi"><div class="l">Unidades</div><div class="v">${fmt(act.reduce((a, l) => a + (+l.qty || 0), 0))}</div></div>
+   <div class="card kpi"><div class="l">Venta en riesgo cubierta</div><div class="v">${fmt(act.reduce((a, l) => a + l.c.lostPost, 0))} u</div></div>
+   <div class="card kpi"><div class="l">Cancel date</div>${tab === '37' ? '<div style="font-size:15px;font-weight:600;margin-top:8px">Según frecuencia de cada tienda</div>' : `<input type="date" data-act="cediDate" value="${S.ocCediDate}" style="margin-top:8px" aria-label="Cancel date CEDI">`}</div>
+  </div>
+  <section class="card"><div class="between pad" style="align-items:center"><h2>${tab === '37' ? 'Formato Directas · una sola tabla ordenada por tienda' : 'Formato CEDI · PANISA ' + tab.slice(-1)}</h2>
+  <span class="small muted">${tab === '37' ? 'Al exportar se agregan VNDL1 ' + V.vndl1 + ', vendor y TYPE 37 DIRECTO' : 'Al exportar se agregan vendor ' + V.base9 + tab.slice(-1) + ', secuencia 81' + tab.slice(-1) + ' y order type 73'} · desmarca lo que no quieras enviar</span></div>
+  <div class="tw"><table><thead><tr>${head}</tr></thead><tbody>${tl.map(row).join('') || `<tr><td colspan="14" class="empty">Sin líneas sugeridas para este formato.</td></tr>`}</tbody></table></div>
+  <div class="pager"><span class="muted">${act.length} de ${tl.length} líneas incluidas · para agregar una combinación, ábrela en Detalle</span><b>Total ${fmt(act.reduce((a, l) => a + (+l.qty || 0), 0))} u</b></div></section>
+  <section class="card"><div class="pad"><h2>Seguimiento de solicitudes anteriores</h2><div class="small muted" style="margin-top:4px">Se compara con las órdenes no automáticas del Fill Rate (cancel date ±2 días)</div></div>
+  <div class="tw"><table><thead><tr><th>Solicitud</th><th>Formato</th><th class="r">Líneas</th><th class="r">Solicitado</th><th class="r">Encontradas en FR</th><th class="r">Recibido</th><th>Cumplimiento</th><th>Archivo</th></tr></thead>
+  <tbody>${tr.map(t => `<tr><td>${esc(new Date(t.fecha).toLocaleDateString('es-GT'))}</td><td>${esc(t.formato)}</td><td class="r">${t.lines.length}</td><td class="r">${fmt(t.solicitado)}</td><td class="r">${t.encontradas}</td><td class="r">${fmt(t.recibido)}</td><td>${t.encontradas ? `<span class="tag ${t.pct >= .95 ? 'verde' : t.pct >= .8 ? 'amarillo' : 'rojo'}">${pct(t.pct)}</span>` : '<span class="tag gray">Pendiente</span>'}</td><td class="small">${esc(t.archivo)}</td></tr>`).join('') || '<tr><td colspan="8" class="empty">Aún no hay solicitudes exportadas.</td></tr>'}</tbody></table></div></section>`;
+}
+const mdy = s => { const d = Core.parseISO(s); return String(d.getMonth() + 1).padStart(2, '0') + ' ' + String(d.getDate()).padStart(2, '0') + ' ' + d.getFullYear(); };
+function xlSerial(s) { const d = Core.parseISO(s); return d ? (Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(1899, 11, 30)) / 864e5 : null; }
+async function exportOC() {
+  if (!S.dir) return toast('Conecta la carpeta del proyecto.');
+  const tab = S.ocTab, act = ocLines().filter(l => l.tab === tab && l.incl && +l.qty > 0);
+  if (!act.length) return toast('No hay líneas incluidas.');
+  const V = S.params.vendor; let aoa, name, sheet;
+  if (tab === '37') {
+    const first = act.map(l => l.cancel).filter(Boolean).sort()[0] || S.A.t0;
+    aoa = [['VNDL1', 'VENDOR', 'STORE NBR', 'FORMATO', 'NOMBRE DE TIENDA', 'TYPE', 'TYPE', 'ITEM NBR', 'DESCRIPCION', 'CÓDIGO', 'OC SUGERIDO', 'CANCEL DATE']]
+      .concat(act.map(l => [+V.vndl1, V.nombreDirecta, l.c.s, Core.formatoOC(l.c.formato), l.c.name, '37', 'DIRECTO', l.c.item, l.c.descOC, l.c.codigoOC, +l.qty, l.cancel || '']));
+    name = 'OC ADD Cancel Date ' + mdy(first) + ' Directa.xlsx'; sheet = 'DIRECTAS';
+  } else {
+    const seq = +tab.slice(-1), cd = S.ocCediDate;
+    aoa = [['VENDOR', 'VENDOR NAME', 'SECUENCIA', 'ORDER TYPE', 'TIENDA', 'NOMBRE', 'ITEM NBR', 'DESCRIPCION', 'CLAVE', 'OC']]
+      .concat(act.map(l => [+(V.base9 + seq), V.nombreCedi, +('81' + seq), 73, l.c.s, l.c.dssName, l.c.item, l.c.desc, l.c.clave + ' CD', +l.qty]));
+    aoa.push(['Total', null, null, null, null, null, null, null, null, act.reduce((a, l) => a + (+l.qty), 0)]);
+    name = 'OC ADD Cancel Date ' + mdy(cd) + ' PANISA ' + seq + '.xlsx'; sheet = 'CANCEL DATE ' + mdy(cd);
+  }
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  if (tab === '37') for (let r = 1; r < aoa.length; r++) { const v = xlSerial(aoa[r][11]); if (v != null) ws[XLSX.utils.encode_cell({ r, c: 11 })] = { t: 'n', v, z: 'mm/dd/yyyy' }; }
+  ws['!cols'] = aoa[0].map((h, i) => ({ wch: Math.min(40, Math.max(String(h).length + 2, ...aoa.slice(1, 200).map(r => String(r[i] == null ? '' : r[i]).length + 1))) }));
+  ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: 0, c: aoa[0].length - 1 } }) };
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, sheet.slice(0, 31));
+  const buf = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+  await writeFile(S.dir, 'OC Manuales/Solicitudes/' + name, buf);
+  const sol = { fecha: new Date().toISOString(), formato: tab === '37' ? 'Directas 810' : 'CEDI 81' + tab.slice(-1), archivo: name, lines: act.map(l => ({ s: l.c.s, i: l.c.item, clave: l.c.clave, qty: +l.qty, cancel: l.cancel || S.ocCediDate })) };
+  const datos = await sub(S.dir, '_datos', true); await writeJSON(datos, 'solicitudes/' + stamp(sol.fecha) + '_' + tab + '.json', sol);
+  S.solicitudes.push(sol); S.track = Core.trackOC(S.solicitudes, S.data.fr);
+  render(); toast('Guardado en OC Manuales\\Solicitudes\\' + name, 6000);
+}
+/* ---------- Ajuste FCST ---------- */
+function fcLines() {
+  return S.A.combos.filter(c => Object.keys(c.fcstSug).length).map(c => { const e = S.fcEdits[c.key] || {}; return { c, incl: e.incl !== false, base: e.base != null ? +e.base : Math.round(c.dem) }; });
+}
+function vFcst() {
+  const FS = new Set(filtered()); const L = fcLines().filter(l => FS.has(l.c)), W = S.A.fcstWeeks.slice(0, 6);
+  const act = L.filter(l => l.incl);
+  const up = c => Object.fromEntries(c.uplifts.map(u => [u.L, u.pct]));
+  return `
+  <div class="between"><div><div class="eyebrow">FCST vigente del ${S.status.fcst && S.status.fcst.length ? new Date(S.status.fcst[S.status.fcst.length - 1]).toLocaleDateString('es-GT') : '—'} · formato provisional hasta recibir el de Walmart</div><h1>Ajuste de FCST</h1></div>
+  <div class="chips"><button class="btn" data-act="fcExport">Exportar ${act.length} combinaciones</button></div></div>
+  ${filterBar()}
+  <div class="kpis">
+   <div class="card kpi"><div class="l">Subir FCST</div><div class="v">${act.filter(l => l.base > (l.c.fcst4 || 0)).length}</div><div class="s">venta sostenida sobre el pronóstico</div></div>
+   <div class="card kpi"><div class="l">Bajar FCST</div><div class="v">${act.filter(l => l.base < (l.c.fcst4 || 0)).length}</div><div class="s">venta bajo el pronóstico o devolución alta</div></div>
+   <div class="card kpi"><div class="l">Diferencia neta/sem</div><div class="v">${fmt(act.reduce((a, l) => a + l.base - (l.c.fcst4 || 0), 0))} u</div></div>
+  </div>
+  <section class="card"><div class="between pad" style="align-items:center"><h2>Combinaciones con sesgo</h2><span class="small muted">La base semanal se ajusta por evento en cada semana. Edita la base si lo necesitas.</span></div>
+  <div class="tw"><table><thead><tr><th></th><th>Tienda</th><th>Clave</th><th>Canal</th><th>Motivo</th><th class="r">FCST prom.</th><th class="r">Base sugerida</th>${W.map(w => `<th class="r">${wkTxt(w)}</th>`).join('')}</tr></thead>
+  <tbody>${L.slice(0, 300).map(l => { const c = l.c, u = up(c); return `<tr style="${l.incl ? '' : 'opacity:.45'}"><td><input type="checkbox" data-fc-incl="${esc(c.key)}" ${l.incl ? 'checked' : ''} aria-label="Incluir ${c.s} ${esc(c.clave)}"></td><td><a data-det="${esc(c.key)}">${c.s} ${esc(c.name)}</a></td><td>${esc(c.clave)}</td><td>${c.canal}</td><td class="small">${esc(c.motivo)}${c.sesgoTxt ? '<br><span class="muted">' + esc(c.sesgoTxt) + '</span>' : ''}</td><td class="r">${fmt(c.fcst4)}</td><td class="r"><input class="num" type="number" min="0" data-fc-base="${esc(c.key)}" value="${l.base}" aria-label="Base ${c.s} ${esc(c.clave)}"></td>${W.map(w => { const f = c.fcstW[w], s = Math.round(l.base * (1 + (u[w] || 0))); return `<td class="r"><span class="muted">${fmt(f)}</span> → <b>${fmt(s)}</b></td>`; }).join('')}</tr>`; }).join('') || `<tr><td colspan="${7 + W.length}" class="empty">Sin ajustes sugeridos con estos filtros.</td></tr>`}</tbody></table></div>
+  ${L.length > 300 ? `<div class="pager muted">Mostrando 300 de ${L.length}. Usa los filtros para acotar; la exportación incluye todas las marcadas.</div>` : ''}</section>`;
+}
+async function exportFcst() {
+  if (!S.dir) return toast('Conecta la carpeta del proyecto.');
+  const FS = new Set(filtered()); const L = fcLines().filter(l => l.incl && FS.has(l.c)); if (!L.length) return toast('No hay combinaciones marcadas.');
+  const W = S.A.fcstWeeks.slice(0, 6);
+  const aoa = [['CANAL', 'STORE NBR', 'NOMBRE', 'ITEM NBR', 'CLAVE', 'DESCRIPCION', 'SEMANA WM', 'FCST ACTUAL', 'FCST SUGERIDO', 'LIFT', 'MOTIVO', 'LLAVE TDA']];
+  for (const l of L) { const c = l.c, u = Object.fromEntries(c.uplifts.map(x => [x.L, x.pct]));
+    for (const w of W) { const f = c.fcstW[w] == null ? null : Math.round(c.fcstW[w] * 100) / 100, s = Math.round(l.base * (1 + (u[w] || 0))); aoa.push([c.canal, c.s, c.name, c.item, c.clave, c.desc, w, f, s, f == null ? null : Math.round((s - f) * 100) / 100, c.motivo, 'K1_WMT_ST_' + String(c.s).padStart(5, '0')]); } }
+  const ws = XLSX.utils.aoa_to_sheet(aoa); ws['!cols'] = [8, 10, 28, 11, 8, 36, 11, 12, 13, 9, 26, 17].map(w => ({ wch: w }));
+  ws['!autofilter'] = { ref: 'A1:L1' };
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'AJUSTE FCST');
+  const d = new Date(), name = 'Ajuste FCST ' + mdy(Core.ymd(d)) + '.xlsx';
+  await writeFile(S.dir, 'Ajuste FCST/Solicitudes/' + name, XLSX.write(wb, { type: 'array', bookType: 'xlsx' }));
+  toast('Guardado en Ajuste FCST\\Solicitudes\\' + name, 6000);
+}
+/* ---------- Carga de datos ---------- */
+function vCarga() {
+  const st = S.status, ov = S.params.fyOverrides;
+  const card = (t, ok, v, s) => `<div class="card kpi ${ok ? '' : 'yel'}"><div class="l">${t}</div><div style="font-size:16px;font-weight:700;margin-top:8px">${v}</div><div class="s">${s}</div></div>`;
+  const cmp = S.cmpFreq.filter(x => x.estado !== 'igual');
+  const frEv = S.frWeek ? Object.entries(S.data.fr[S.frWeek].eventos) : [];
+  return `
+  <div class="between"><div><div class="eyebrow">Sábado: Venta, Devoluciones, Instock · Martes: Fill Rate · Miércoles: FCST</div><h1>Carga de datos</h1></div>
+  <div class="chips">${S.dir ? `<span class="chip">${esc(S.dir.name)}</span>` : ''}${S.frDir ? `<span class="chip">${esc(S.frDir.name)}</span>` : ''}
+  <button class="btn sec" data-act="connect">Carpeta del proyecto</button><button class="btn sec" data-act="connectFr">Carpeta Fill Rate</button>
+  ${S.dir ? '<button class="btn" data-act="refresh">Actualizar</button><button class="btn ghost" data-act="reprocess">Reprocesar todo</button>' : ''}</div></div>
+  ${S.A ? `<div class="kpis">
+   ${card('Venta semanal', st.venta && st.venta.length, st.venta && st.venta.length ? 'Semanas ' + st.venta.slice(-4).join(', ') : '—', (st.venta || []).length + ' semana(s) en historia · se necesitan 4 para el promedio completo')}
+   ${card('Devoluciones', st.dev && st.dev.length, st.dev && st.dev.length ? 'Semanas ' + st.dev.slice(-4).join(', ') : '—', (st.dev || []).length + ' semana(s) guardadas')}
+   ${card('FCST', st.fcst && st.fcst.length, st.fcst && st.fcst.length ? new Date(st.fcst[st.fcst.length - 1]).toLocaleString('es-GT') : '—', (st.fcst || []).length + ' copia(s) guardadas para medir sesgo')}
+   ${card('RTL / DSS (inventario)', !!st.dss, st.dss ? new Date(st.dss).toLocaleString('es-GT') : '—', 'Se usa el más reciente')}
+   ${card('Instock 35 días', !!st.instock, st.instock || '—', 'Respaldo mientras se junta la historia')}
+   ${card('Fill Rate', st.fr && st.fr.length, st.fr && st.fr.length ? 'Semanas ' + st.fr.join(', ') : '—', 'Últimas 6 semanas desde la carpeta Por Combinacion')}
+   ${card('Frecuencias', !!st.freq, st.freq ? esc(st.freq.name) : '—', st.freq ? 'Modificado ' + new Date(st.freq.date).toLocaleDateString('es-GT') : '')}
+  </div>` : ''}
+  <section class="card"><div class="pad"><h2>Bitácora de la última actualización</h2></div><pre class="log">${esc(S.log.join('\n') || 'Sin actividad.')}</pre></section>
+  ${S.A ? `<div class="row">
+   <section class="card" style="flex:1.3 1 480px;min-width:0"><div class="between pad" style="align-items:center"><h2>Frecuencias: archivo vs órdenes Walmart</h2><span class="small muted">Informativo · el archivo es el maestro</span></div>
+   <div class="tw"><table><thead><tr><th>Tienda</th><th>Archivo (+desfase)</th><th>Cancel date Walmart</th><th>Estado</th></tr></thead><tbody>
+   ${cmp.map(x => `<tr><td>${x.s} ${esc(x.nombre)}</td><td>${esc(x.archivo) || '—'}</td><td>${esc(x.walmart) || '—'}</td><td><span class="tag ${x.estado === '+1 día' ? 'gray' : 'amarillo'}">${esc(x.estado)}</span></td></tr>`).join('') || '<tr><td colspan="4" class="empty">Todo coincide.</td></tr>'}</tbody></table></div>
+   <div class="pager muted">${S.cmpFreq.filter(x => x.estado === 'igual').length} tiendas coinciden · "+1 día": la orden cancela un día después de la visita (ajústalo en Parámetros › Tiendas)</div></section>
+   <section class="card" style="flex:1 1 360px;min-width:0"><div class="pad"><h2>Tipos de orden en Fill Rate ${S.frWeek || ''}</h2><div class="small muted" style="margin-top:4px">Clasifícalos en Parámetros › Órdenes</div></div>
+   <div class="tw"><table><thead><tr><th>PO Event</th><th>Clase</th><th class="r">Pedido</th><th class="r">Recibido</th><th class="r">FR</th></tr></thead><tbody>
+   ${frEv.map(([ev, e]) => { const o = Object.values(e.t).reduce((a, x) => a + x.ord, 0), r = Object.values(e.t).reduce((a, x) => a + x.rec, 0); return `<tr><td>${esc(ev)}</td><td>${esc(Core.poClass(ev, S.params))}</td><td class="r">${fmt(o)}</td><td class="r">${fmt(r)}</td><td class="r">${pct(o ? r / o : null)}</td></tr>`; }).join('')}</tbody></table></div></section>
+  </div>
+  ${S.A.warnings.length ? `<section class="card pad"><h2>Avisos</h2><ul class="small">${S.A.warnings.slice(0, 30).map(w => `<li>${esc(w)}</li>`).join('')}</ul></section>` : ''}` : ''}`;
+}
+/* ---------- Parámetros ---------- */
+function getPath(o, p) { return p.split('.').reduce((a, k) => a == null ? a : a[k], o); }
+function setPath(o, p, v) { const ks = p.split('.'); let a = o; ks.slice(0, -1).forEach(k => { if (a[k] == null) a[k] = {}; a = a[k]; }); a[ks[ks.length - 1]] = v; }
+function vParam() {
+  const P = S.params, G = P.general, t = S.paramTab;
+  const inp = (p, extra) => `<input type="number" step="any" data-p="${p}" value="${esc(getPath(P, p))}" ${extra || ''} style="width:100%">`;
+  const tabs = [['general', 'General'], ['items', 'Items'], ['tiendas', 'Tiendas'], ['eventos', 'Calendario y eventos'], ['ordenes', 'Órdenes'], ['vendor', 'Vendor']];
+  let body = '';
+  if (t === 'general') body = `<div class="row"><section class="card pad" style="flex:1 1 420px"><h2 style="margin-bottom:14px">Objetivos por canal</h2>
+   <div class="grid2"><span></span><span class="small muted">DIRECTAS</span><span class="small muted">CEDI</span>
+   <span>Fill rate objetivo (%)</span>${inp('general.frObj.37')}${inp('general.frObj.33')}
+   <span>Días de inventario objetivo</span>${inp('general.diasInv.37')}${inp('general.diasInv.33')}
+   <span>Lead time (días)</span>${inp('general.leadTime.37')}${inp('general.leadTime.33')}
+   <span>Días de seguridad en OC manual</span>${inp('general.diasSeguridad.37')}${inp('general.diasSeguridad.33')}</div></section>
+   <section class="card pad" style="flex:1 1 420px"><h2 style="margin-bottom:14px">Reglas de alerta</h2><div class="grid1">
+   <span>Semanas desviadas (de las últimas 4) para sesgo</span>${inp('general.sesgoSemanas')}
+   <span>Desviación mínima (%)</span>${inp('general.desvMinPct')}
+   <span>Y al menos (unidades/semana)</span>${inp('general.desvMinU')}
+   <span>Días proyectados después de la próxima entrega</span>${inp('general.horizonteRojo')}
+   <span>Devolución alta (% de la venta)</span>${inp('general.devAltaPct')}
+   <span>Fill rate bajo: puntos bajo el objetivo</span>${inp('general.frBajoPts')}
+   <span>Vida útil por defecto (días)</span>${inp('general.vidaUtil')}
+   <span>Cancel date CEDI: días desde hoy</span>${inp('general.cancelCedi')}</div></section></div>`;
+  if (t === 'items') { const it = Object.values(P.items).sort((a, b) => a.clave.localeCompare(b.clave));
+    body = `<section class="card"><div class="between pad" style="align-items:center"><h2>Items</h2><button class="btn ghost" data-act="addItem">Agregar item</button></div><div class="tw"><table><thead><tr><th>Clave</th><th>Descripción</th><th>CID</th><th>Item Directo</th><th>Item CD</th><th>Vendor CD</th><th>Código OC Directa</th><th>Descripción OC Directa</th><th>Vida útil</th><th>VNPK</th><th>Activo</th><th></th></tr></thead><tbody>
+    ${it.map(x => { const b = 'items.' + x.clave + '.'; const ti = (f, w) => `<input type="text" data-p="${b + f}" data-txt="1" value="${esc(x[f] == null ? '' : x[f])}" style="width:${w}px">`; const nu = (f, w) => `<input type="number" data-p="${b + f}" value="${esc(x[f] == null ? '' : x[f])}" style="width:${w}px">`;
+      return `<tr><td><b>${esc(x.clave)}</b></td><td>${ti('desc', 240)}</td><td>${nu('cid', 100)}</td><td>${nu('itemD', 100)}</td><td>${nu('itemC', 100)}</td><td><select data-p="${b}seqC"><option value="">—</option><option value="1" ${x.seqC == 1 ? 'selected' : ''}>811</option><option value="2" ${x.seqC == 2 ? 'selected' : ''}>812</option></select></td><td>${ti('codigoOC', 70)}</td><td>${ti('descOC', 240)}</td><td>${nu('vida', 60)}</td><td>${nu('vnpk', 50)}</td><td><input type="checkbox" data-p="${b}activo" ${x.activo !== false ? 'checked' : ''} aria-label="Activo ${esc(x.clave)}"></td><td><a data-act="delItem" data-k="${esc(x.clave)}">Eliminar</a></td></tr>`; }).join('')}</tbody></table></div>
+    <div class="pager muted">Vendor CD vacío = se toma de Retail Link. Vida útil vacía = ${G.vidaUtil} días.</div></section>`; }
+  if (t === 'tiendas') { const fq = S.data ? S.data.masters.freq : {}, sm = S.data ? S.data.masters.stores : {};
+    const ids = Array.from(new Set([...Object.keys(sm), ...Object.keys(fq)])).map(Number).sort((a, b) => a - b);
+    body = `<section class="card"><div class="between pad" style="align-items:center"><h2>Tiendas</h2><span class="small muted">Los días de entrega vienen del archivo de Frecuencias (maestro). Aquí ajustas STR TYPE, desfase y estado.</span></div><div class="tw"><table><thead><tr><th>Tienda</th><th>Formato</th><th>STR TYPE (Data Item)</th><th>STR TYPE vigente</th><th>Desde</th><th>Vendedor</th><th>Días de entrega</th><th>Cancel + días</th><th>Estado</th></tr></thead><tbody>
+    ${ids.map(s => { const m = sm[s] || {}, f = fq[s] || {}, o = P.stores[s] || {}, b = 'stores.' + s + '.';
+      return `<tr><td>${s} ${esc(f.nombre || m.nombre || '')}</td><td>${esc(m.formato || f.formato || '')}</td><td>${m.type || '—'}</td><td><select data-p="${b}type"><option value="">igual</option><option value="37" ${o.type == 37 ? 'selected' : ''}>37 Directa</option><option value="33" ${o.type == 33 ? 'selected' : ''}>33 CEDI</option></select></td><td><input type="date" data-p="${b}vigencia" data-txt="1" value="${esc(o.vigencia || '')}" aria-label="Vigencia ${s}"></td><td>${esc(f.vendedor || '')}</td><td>${f.dias ? f.dias.map((v, d) => v ? Core.DIA[d] : null).filter(Boolean).join(' · ') : '—'}</td><td><input type="number" min="0" max="3" data-p="${b}offset" value="${esc(o.offset || 0)}" style="width:60px" aria-label="Desfase ${s}"></td><td><select data-p="${b}estado" data-txt="1"><option ${!o.estado || o.estado === 'Activa' ? 'selected' : ''}>Activa</option><option ${o.estado === 'Inactiva' ? 'selected' : ''}>Inactiva</option></select></td></tr>`; }).join('')}</tbody></table></div></section>`; }
+  if (t === 'eventos') { const y = Core.weekInfo(new Date(), P.fyOverrides).fy;
+    body = `<div class="row"><section class="card pad" style="flex:1 1 360px"><h2 style="margin-bottom:6px">Inicio de semana 1 por año</h2><div class="small muted" style="margin-bottom:12px">Regla: último sábado en o antes del 1 de febrero. Cámbialo solo si Walmart define otra fecha.</div>
+    <div class="grid1">${[y, y + 1, y + 2].map(a => `<span>Año ${a} · regla ${Core.ymd(Core.fyStart(a, {}))}</span><input type="date" data-p="fyOverrides.${a}" data-txt="1" value="${esc(P.fyOverrides[a] || '')}" aria-label="Inicio ${a}">`).join('')}</div></section>
+    <section class="card" style="flex:2 1 560px"><div class="between pad" style="align-items:center"><h2>Eventos de temporada</h2><button class="btn ghost" data-act="addEv">Agregar evento</button></div><div class="tw"><table><thead><tr><th>Nombre</th><th>Tipo</th><th>Mes</th><th>Día</th><th class="r">Aumento %</th><th>Activo</th><th></th></tr></thead><tbody>
+    ${P.eventos.map((e, i) => { const b = 'eventos.' + i + '.'; const fix = e.tipo !== 'fecha'; return `<tr><td><input type="text" data-p="${b}nombre" data-txt="1" value="${esc(e.nombre)}"></td><td>${fix ? (e.tipo === 'cuaresma' ? 'Cuaresma (auto)' : 'Semana Santa (auto)') : 'Fecha fija'}</td><td>${fix ? '—' : `<input type="number" min="1" max="12" data-p="${b}mes" value="${e.mes}" style="width:60px">`}</td><td>${fix ? '—' : `<input type="number" min="1" max="31" data-p="${b}dia" value="${e.dia}" style="width:60px">`}</td><td class="r"><input type="number" data-p="${b}pct" value="${e.pct}" style="width:70px"></td><td><input type="checkbox" data-p="${b}activo" ${e.activo !== false ? 'checked' : ''} aria-label="Activo ${esc(e.nombre)}"></td><td>${fix ? '' : `<a data-act="delEv" data-i="${i}">Eliminar</a>`}</td></tr>`; }).join('')}</tbody></table></div>
+    <div class="pager muted">El aumento se aplica a la demanda estimada de la semana que contiene la fecha. Los % iniciales son provisionales.</div></section></div>`; }
+  if (t === 'ordenes') { const seen = new Set(Object.keys(P.poEvents)); if (S.data) for (const L in S.data.fr) Object.keys(S.data.fr[L].eventos).forEach(e => seen.add(e));
+    body = `<section class="card" style="max-width:720px"><div class="pad"><h2>Clasificación de PO Events</h2><div class="small muted" style="margin-top:4px">Cuando identifiques el código de tus OC manuales, márcalo como "Manual solicitada".</div></div><div class="tw"><table><thead><tr><th>PO Event</th><th>Clase</th></tr></thead><tbody>
+    ${Array.from(seen).sort().map(ev => `<tr><td>${esc(ev)}</td><td><select data-p="poEvents.${esc(ev)}" data-txt="1">${[['auto', 'Automática'], ['manualWalmart', 'Manual Walmart'], ['manualPropia', 'Manual solicitada'], ['otra', 'Otra (no cuenta)']].map(([v, n]) => `<option value="${v}" ${Core.poClass(ev, P) === v ? 'selected' : ''}>${n}</option>`).join('')}</select></td></tr>`).join('')}</tbody></table></div></section>`; }
+  if (t === 'vendor') body = `<section class="card pad" style="max-width:640px"><h2 style="margin-bottom:14px">Datos del proveedor en los formatos</h2><div class="grid1" style="grid-template-columns:1fr 260px">
+   <span>VNDL1 (Directas)</span><input type="text" data-p="vendor.vndl1" data-txt="1" value="${esc(P.vendor.vndl1)}">
+   <span>Nombre en formato Directas</span><input type="text" data-p="vendor.nombreDirecta" data-txt="1" value="${esc(P.vendor.nombreDirecta)}">
+   <span>Nombre en formato CEDI</span><input type="text" data-p="vendor.nombreCedi" data-txt="1" value="${esc(P.vendor.nombreCedi)}">
+   <span>Base del vendor de 9 dígitos (+ secuencia)</span><input type="text" data-p="vendor.base9" data-txt="1" value="${esc(P.vendor.base9)}"></div></section>`;
+  return `<div class="between"><h1>Parámetros</h1><div class="chips"><span class="small muted">${S.dir ? 'Se guardan en _datos\\parametros.json' : 'Conecta la carpeta para guardar'}</span><button class="btn" data-act="saveParams">Guardar y recalcular</button></div></div>
+  <div class="tabs" role="tablist">${tabs.map(([k, n]) => `<button role="tab" aria-selected="${k === t}" class="${k === t ? 'on' : ''}" data-ptab="${k}">${n}</button>`).join('')}</div>${body}`;
+}
+
+/* ---------- eventos de la interfaz ---------- */
+document.addEventListener('click', async e => {
+  const v = e.target.closest('[data-view]'); if (v) { S.view = v.dataset.view; render(); window.scrollTo(0, 0); return; }
+  const det = e.target.closest('[data-det]'); if (det && !e.target.closest('input')) { S.detKey = det.dataset.det; S.view = 'detalle'; render(); window.scrollTo(0, 0); return; }
+  const t = e.target.closest('[data-octab]'); if (t) { S.ocTab = t.dataset.octab; render(); return; }
+  const pt = e.target.closest('[data-ptab]'); if (pt) { S.paramTab = pt.dataset.ptab; render(); return; }
+  const a = e.target.closest('[data-act]'); if (!a || a.tagName === 'SELECT' || a.tagName === 'INPUT') return;
+  const act = a.dataset.act;
+  if (act === 'connect') return connectProject();
+  if (act === 'connectFr') return connectFr();
+  if (act === 'reopen') return reopen();
+  if (act === 'refresh') return actualizar(false);
+  if (act === 'reprocess') { if (confirm('Volver a leer todos los archivos de las carpetas? La historia guardada se conserva.')) return actualizar(true); return; }
+  if (act === 'pg') { S.page += +a.dataset.d; render(); return; }
+  if (act === 'fmot') { S.filt.motivo = a.dataset.m; S.page = 1; render(); return; }
+  if (act === 'fmant') { S.filt.mant = true; S.filt.estado = ''; S.page = 1; render(); return; }
+  if (act === 'nav') { const { c, L } = curDet(); const i = L.findIndex(x => x.key === c.key) + (+a.dataset.d); if (L[i]) { S.detKey = L[i].key; render(); } return; }
+  if (act === 'ocToggle') { const k = a.dataset.k, c = S.A.combos.find(x => x.key === k);
+    if (c.estado === 'rojo') { const e2 = S.ocEdits[k] || (S.ocEdits[k] = {}); e2.incl = e2.incl === false; }
+    else { const i = S.ocExtra.findIndex(x => x.key === k); if (i >= 0) S.ocExtra.splice(i, 1); else S.ocExtra.push({ key: k }); }
+    saveDraft(); render(); toast('OC manual actualizada'); return; }
+  if (act === 'fcToggle') { const k = a.dataset.k, e2 = S.fcEdits[k] || (S.fcEdits[k] = {}); e2.incl = e2.incl === false; saveDraft(); render(); return; }
+  if (act === 'ocReset') { if (confirm('Quitar todos los cambios manuales de las OC?')) { S.ocEdits = {}; S.ocExtra = []; saveDraft(); render(); } return; }
+  if (act === 'ocExport') { busy(true, 'Exportando…'); try { await exportOC(); } catch (er) { toast('Error al exportar: ' + er.message, 6000); } busy(false); return; }
+  if (act === 'fcExport') { busy(true, 'Exportando…'); try { await exportFcst(); } catch (er) { toast('Error al exportar: ' + er.message, 6000); } busy(false); return; }
+  if (act === 'saveParams') { busy(true, 'Recalculando…'); await saveParams(false); busy(false); return; }
+  if (act === 'addItem') { const k = (prompt('Clave del nuevo item (ej. 5HM4):') || '').trim().toUpperCase(); if (!k) return; if (S.params.items[k]) return toast('Esa clave ya existe'); S.params.items[k] = { clave: k, cid: null, ean: '', desc: '', itemD: null, itemC: null, seqC: null, codigoOC: k.replace(/^\d+(?=[A-Z])/, ''), descOC: '', vida: null, vnpk: 1, activo: true }; render(); return; }
+  if (act === 'delItem') { if (confirm('Eliminar la clave ' + a.dataset.k + '? Sus combinaciones dejarán de analizarse.')) { delete S.params.items[a.dataset.k]; render(); } return; }
+  if (act === 'addEv') { S.params.eventos.push({ id: 'ev' + Date.now(), nombre: 'Nuevo evento', tipo: 'fecha', mes: 1, dia: 1, pct: 10, activo: true }); render(); return; }
+  if (act === 'delEv') { S.params.eventos.splice(+a.dataset.i, 1); render(); return; }
+});
+document.addEventListener('keydown', e => { if (e.key === 'Enter') { const r = e.target.closest('tr[data-det]'); if (r) { S.detKey = r.dataset.det; S.view = 'detalle'; render(); } } });
+document.addEventListener('change', e => {
+  const el = e.target;
+  if (el.dataset.filt) { S.filt[el.dataset.filt] = el.type === 'checkbox' ? el.checked : el.value; S.page = 1; render(); return; }
+  if (el.dataset.act === 'goto') { S.detKey = el.value; render(); return; }
+  if (el.dataset.act === 'cediDate') { S.ocCediDate = el.value; render(); return; }
+  if (el.dataset.ocIncl) { const k = el.dataset.ocIncl, c = S.A.combos.find(x => x.key === k); if (c.estado === 'rojo') (S.ocEdits[k] || (S.ocEdits[k] = {})).incl = el.checked; else if (!el.checked) S.ocExtra = S.ocExtra.filter(x => x.key !== k); saveDraft(); render(); return; }
+  if (el.dataset.ocQty) { (S.ocEdits[el.dataset.ocQty] || (S.ocEdits[el.dataset.ocQty] = {})).qty = Math.max(0, +el.value || 0); saveDraft(); render(); return; }
+  if (el.dataset.ocCancel) { (S.ocEdits[el.dataset.ocCancel] || (S.ocEdits[el.dataset.ocCancel] = {})).cancel = el.value; saveDraft(); return; }
+  if (el.dataset.fcIncl) { (S.fcEdits[el.dataset.fcIncl] || (S.fcEdits[el.dataset.fcIncl] = {})).incl = el.checked; saveDraft(); render(); return; }
+  if (el.dataset.fcBase) { (S.fcEdits[el.dataset.fcBase] || (S.fcEdits[el.dataset.fcBase] = {})).base = Math.max(0, +el.value || 0); saveDraft(); render(); return; }
+  if (el.dataset.p) {
+    let val = el.type === 'checkbox' ? el.checked : el.value;
+    if (!el.dataset.txt && el.type !== 'checkbox') val = el.value === '' ? null : +el.value;
+    if (el.tagName === 'SELECT' && !el.dataset.txt) val = el.value === '' ? null : +el.value;
+    if (el.dataset.p.startsWith('fyOverrides.') && !val) { delete S.params.fyOverrides[el.dataset.p.split('.')[1]]; return; }
+    setPath(S.params, el.dataset.p, val);
+  }
+});
+document.addEventListener('input', e => { if (e.target.dataset.filt === 'q') { clearTimeout(S.qh); const el = e.target; S.qh = setTimeout(() => { S.filt.q = el.value; S.page = 1; render(); const n = document.querySelector('[data-filt=q]'); if (n) { n.focus(); n.setSelectionRange(n.value.length, n.value.length); } }, 350); } });
+
+/* ---------- inicio ---------- */
+(async function init() {
+  render();
+  if (!fsOK) return;
+  try {
+    S.dir = await idb.get('dir'); S.frDir = await idb.get('frDir');
+    if (S.dir && (await S.dir.queryPermission({ mode: 'readwrite' })) === 'granted') await actualizar(false);
+    else render();
+  } catch (e) { render(); }
+})();
+</script>
+</body>
+</html>

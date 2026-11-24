@@ -1,0 +1,4 @@
+node_modules/
+_datos/
+*.xlsx
+.DS_Store
