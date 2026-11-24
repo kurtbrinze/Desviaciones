@@ -96,7 +96,7 @@ td.zero{background:var(--rbg);color:var(--rtx);font-weight:700}td.ocd{box-shadow
 <script>/*__CORE__*/</script>
 <script>
 'use strict';
-const VERSION = 'V.4';
+const VERSION = 'V.5';
 const $ = s => document.querySelector(s);
 const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmt = (n, d = 0) => n == null || isNaN(n) ? '—' : Number(n).toLocaleString('es-GT', { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -564,7 +564,7 @@ async function exportOC() {
     name = 'OC ADD Cancel Date ' + mdy(first) + ' Directa.xlsx';
     buf = await styledXlsx('DIRECTAS', ['VNDL1', 'VENDOR', 'STORE NBR', 'FORMATO', 'NOMBRE DE TIENDA', 'TYPE', 'TYPE', 'ITEM NBR', 'DESCRIPCION', 'CÓDIGO', 'OC SUGERIDO', 'CANCEL DATE'],
       act.map(l => [+V.vndl1, V.nombreDirecta, l.c.s, Core.formatoOC(l.c.formato), l.c.name, '37', 'DIRECTO', l.c.item, l.c.descOC, l.c.codigoOC, +l.qty, utcDate(l.cancel)]),
-      { dateCols: [11], totalCol: 10 });
+      { dateCols: [11] });
   } else {
     const seq = +tab.slice(-1), cd = S.ocCediDate;
     name = 'OC ADD Cancel Date ' + mdy(cd) + ' PANISA ' + seq + '.xlsx';
