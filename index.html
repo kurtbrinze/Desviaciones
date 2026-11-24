@@ -4,6 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Análisis Desviaciones · PANISA</title>
+<meta name="theme-color" content="#1F2733">
+<meta name="description" content="Venta vs FCST Walmart por combinación tienda + item, OC manuales y ajustes de FCST.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <style>
 :root{--bg:#F5F5F3;--card:#FFFFFF;--line:#E3E5E8;--line2:#EEF0F2;--tx:#1F2328;--mut:#5B636E;--acc:#2F3A4A;--nav:#1F2733;
 --r:#C62828;--rbg:#FDECEA;--rtx:#A61B1B;--y:#D98A00;--ybg:#FFF2DB;--ytx:#7A4A00;--g:#2E7D32;--gbg:#E8F2EA;--gtx:#22582B}
@@ -78,6 +83,7 @@ td.zero{background:var(--rbg);color:var(--rtx);font-weight:700}td.ocd{box-shadow
 <button data-view="fcst"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 20h16M7 16V9M12 16V5M17 16v-4"/></svg>Ajuste FCST</button>
 <button data-view="carga"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg>Carga de datos</button>
 <button data-view="param"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>Parámetros</button>
+<button id="install" hidden><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 7v7M9 11l3 3 3-3"/></svg>Instalar app</button>
 <div class="ver" id="ver"></div>
 </nav>
 <main id="main" aria-live="polite"></main>
@@ -740,7 +746,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = Core; else
 </script>
 <script>
 'use strict';
-const VERSION = 'V.1';
+const VERSION = 'V.2';
 const $ = s => document.querySelector(s);
 const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmt = (n, d = 0) => n == null || isNaN(n) ? '—' : Number(n).toLocaleString('es-GT', { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -1363,6 +1369,13 @@ document.addEventListener('change', e => {
   }
 });
 document.addEventListener('input', e => { if (e.target.dataset.filt === 'q') { clearTimeout(S.qh); const el = e.target; S.qh = setTimeout(() => { S.filt.q = el.value; S.page = 1; render(); const n = document.querySelector('[data-filt=q]'); if (n) { n.focus(); n.setSelectionRange(n.value.length, n.value.length); } }, 350); } });
+
+/* ---------- app instalable ---------- */
+let installEvt = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; $('#install').hidden = false; });
+window.addEventListener('appinstalled', () => { installEvt = null; $('#install').hidden = true; toast('App instalada'); });
+$('#install').addEventListener('click', async () => { if (!installEvt) return; installEvt.prompt(); await installEvt.userChoice; installEvt = null; $('#install').hidden = true; });
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => { });
 
 /* ---------- inicio ---------- */
 (async function init() {

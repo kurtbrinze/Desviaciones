@@ -1,0 +1,17 @@
+{
+  "name": "Análisis Desviaciones · PANISA",
+  "short_name": "Desviaciones",
+  "description": "Venta vs FCST Walmart por combinación tienda + item, OC manuales y ajustes de FCST.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F5F5F3",
+  "theme_color": "#1F2733",
+  "lang": "es",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
