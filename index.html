@@ -746,7 +746,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = Core; else
 </script>
 <script>
 'use strict';
-const VERSION = 'V.2';
+const VERSION = 'V.3';
 const $ = s => document.querySelector(s);
 const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmt = (n, d = 0) => n == null || isNaN(n) ? '—' : Number(n).toLocaleString('es-GT', { minimumFractionDigits: d, maximumFractionDigits: d });

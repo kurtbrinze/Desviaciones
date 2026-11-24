@@ -95,7 +95,7 @@ td.zero{background:var(--rbg);color:var(--rtx);font-weight:700}td.ocd{box-shadow
 <script>/*__CORE__*/</script>
 <script>
 'use strict';
-const VERSION = 'V.2';
+const VERSION = 'V.3';
 const $ = s => document.querySelector(s);
 const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmt = (n, d = 0) => n == null || isNaN(n) ? '—' : Number(n).toLocaleString('es-GT', { minimumFractionDigits: d, maximumFractionDigits: d });
