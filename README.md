@@ -28,3 +28,12 @@ python3 build.py   # genera index.html desde src/
 
 - `src/core.js`: lectura de reportes, calendario Walmart (semana 1 = último sábado en o antes del 1 de febrero), eventos, proyección y semáforo.
 - `src/index.src.html`: interfaz.
+
+## Centro de Control
+
+Cada vez que se analizan los datos, la app deja un resumen en `localStorage`
+(`cc.insight.desviaciones`) y avisa al Centro de Control por `postMessage`. El
+resumen trae el Fill Rate de la última semana contra el objetivo, las
+combinaciones con alerta con las 3 más urgentes, las OC manuales que hacen
+falta, la venta vs FCST de la última semana y el próximo evento. Es lo que
+muestra la tarjeta de Desviaciones en el inicio del centro.
