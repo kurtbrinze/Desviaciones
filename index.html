@@ -277,7 +277,7 @@ Core.defaultParams = function () {
       { id: 'nino', nombre: 'Día del Niño', tipo: 'fecha', mes: 10, dia: 1, pct: 5, activo: true },
       { id: 'santos', nombre: 'Todos los Santos', tipo: 'fecha', mes: 11, dia: 1, pct: 10, activo: true }
     ],
-    poEvents: { 'POS REPLEN': 'auto', 'ANULADA': 'otra', 'APERT_A': 'otra' }, // resto TDMANUAL* = manual Walmart
+    poEvents: { 'POS REPLEN': 'auto', 'ANULADA': 'otra', 'APERT_A': 'otra', 'TDMANUAL43': 'manualPropia' }, // resto TDMANUAL* = manual Walmart
     items: {},   // clave -> {...}
     stores: {},  // tienda -> overrides {offset, estado, type, vigencia}
     formato: { font: 'Calibri', size: 12, header: '4F81BD', headerFont: 'FFFFFF', band: 'D9D9D9' },
@@ -773,9 +773,12 @@ Core.compareFrecuencias = function (freq, frWeeks, params) {
 };
 
 /* seguimiento de OC solicitadas contra lo recibido (Fill Rate) */
-Core.trackOC = function (solicitudes, frWeeks) {
-  const lines = [];
+Core.trackOC = function (solicitudes, frWeeks, params) {
+  let lines = [];
   for (const L in frWeeks || {}) for (const m of frWeeks[L].manual) lines.push(m);
+  /* si ya hay órdenes clasificadas como "Manual solicitada", se comparan solo contra esas */
+  const propias = lines.filter(m => Core.poClass(m.ev, params) === 'manualPropia');
+  if (propias.length) lines = propias;
   return (solicitudes || []).map(sol => {
     let sol_u = 0, rec = 0, enc = 0;
     for (const l of sol.lines) {
@@ -792,7 +795,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = Core; else
 </script>
 <script>
 'use strict';
-const VERSION = 'V.5';
+const VERSION = 'V.6';
 const $ = s => document.querySelector(s);
 const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmt = (n, d = 0) => n == null || isNaN(n) ? '—' : Number(n).toLocaleString('es-GT', { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -974,7 +977,7 @@ function analizar() {
   const frL = Object.keys(S.data.fr).map(Number).sort((a, b) => b - a);
   S.frWeek = frL[0] || null; S.frSum = S.frWeek ? Core.frSummary(S.data.fr[S.frWeek], S.params) : null;
   S.cmpFreq = Core.compareFrecuencias(S.data.masters.freq, S.data.fr, S.params);
-  S.track = Core.trackOC(S.solicitudes, S.data.fr);
+  S.track = Core.trackOC(S.solicitudes, S.data.fr, S.params);
   if (!S.ocCediDate) S.ocCediDate = Core.ymd(Core.addDays(Core.parseISO(S.A.t0), S.params.general.cancelCedi));
 }
 async function saveParams(reload) {
@@ -1052,7 +1055,7 @@ function vResumen() {
   const n = e => L.filter(c => c.estado === e).length;
   const tot = L.length || 1;
   const fr = t => { const x = (S.frSum || []).find(o => o.t === t && o.cls === 'auto'); return x && x.ord ? x.rec / x.ord : null; };
-  const frm = t => { const x = (S.frSum || []).find(o => o.t === t && o.cls !== 'auto' && o.cls !== 'otra'); return x && x.ord ? x.rec / x.ord : null; };
+  const frm = (t, cls) => { const x = (S.frSum || []).find(o => o.t === t && o.cls === cls); return x && x.ord ? x.rec / x.ord : null; };
   const G = S.params.general;
   const mot = {}; L.filter(c => c.estado !== 'verde').forEach(c => mot[c.motivo] = (mot[c.motivo] || 0) + 1);
   const motArr = Object.entries(mot).sort((a, b) => b[1] - a[1]); const motMax = motArr.length ? motArr[0][1] : 1;
@@ -1075,7 +1078,7 @@ function vResumen() {
    <div class="card kpi grn"><div class="l">✓ Verde · en parámetros</div><div class="v" style="color:var(--gtx)">${fmt(n('verde'))}</div><div class="s">${pct(n('verde') / tot)} del total</div></div>
    <div class="card kpi"><div class="l">Fill rate ${S.frWeek || ''} · objetivo ${G.frObj[37]}%</div>
     ${[[37, 'Directas'], [33, 'CEDI']].map(([t, nm]) => { const v = fr(t); const bad = v != null && v * 100 < G.frObj[t]; return `<div style="font-size:15px;font-weight:600;margin-top:10px;display:flex;justify-content:space-between"><span>${nm}</span><span style="${bad ? 'color:var(--rtx)' : ''}">${pct(v)}</span></div><div class="bar" style="height:6px"><div style="height:6px;width:${Math.round((v || 0) * 100)}%;background:${bad ? 'var(--r)' : 'var(--acc)'}"></div></div>`; }).join('')}
-    <div class="s">OC manuales Walmart: Directas ${pct(frm(37))} · CEDI ${pct(frm(33))}</div></div>
+    <div class="s">OC manuales solicitadas: Directas ${pct(frm(37, 'manualPropia'))} · CEDI ${pct(frm(33, 'manualPropia'))}</div><div class="s">OC manuales Walmart: Directas ${pct(frm(37, 'manualWalmart'))} · CEDI ${pct(frm(33, 'manualWalmart'))}</div></div>
   </div>
   <div class="row">
     <div class="card pad" style="flex:1 1 280px;min-width:0"><h2 style="margin-bottom:14px">Motivo de las alertas</h2>
@@ -1211,7 +1214,7 @@ function vOC() {
   <span class="small muted">${tab === '37' ? 'Al exportar se agregan VNDL1 ' + V.vndl1 + ', vendor y TYPE 37 DIRECTO' : 'Al exportar se agregan vendor ' + V.base9 + tab.slice(-1) + ', secuencia 81' + tab.slice(-1) + ' y order type 73'} · desmarca lo que no quieras enviar</span></div>
   <div class="tw"><table><thead><tr>${head}</tr></thead><tbody>${tl.map(row).join('') || `<tr><td colspan="14" class="empty">Sin líneas sugeridas para este formato.</td></tr>`}</tbody></table></div>
   <div class="pager"><span class="muted">${act.length} de ${tl.length} líneas incluidas · para agregar una combinación, ábrela en Detalle</span><b>Total ${fmt(act.reduce((a, l) => a + (+l.qty || 0), 0))} u</b></div></section>
-  <section class="card"><div class="pad"><h2>Seguimiento de solicitudes anteriores</h2><div class="small muted" style="margin-top:4px">Se compara con las órdenes no automáticas del Fill Rate (cancel date ±2 días)</div></div>
+  <section class="card"><div class="pad"><h2>Seguimiento de solicitudes anteriores</h2><div class="small muted" style="margin-top:4px">Se compara con las órdenes "Manual solicitada" del Fill Rate (TDMANUAL43), cancel date ±2 días. Se actualiza con el Fill Rate de cada martes.</div></div>
   <div class="tw"><table><thead><tr><th>Solicitud</th><th>Formato</th><th class="r">Líneas</th><th class="r">Solicitado</th><th class="r">Encontradas en FR</th><th class="r">Recibido</th><th>Cumplimiento</th><th>Archivo</th></tr></thead>
   <tbody>${tr.map(t => `<tr><td>${esc(new Date(t.fecha).toLocaleDateString('es-GT'))}</td><td>${esc(t.formato)}</td><td class="r">${t.lines.length}</td><td class="r">${fmt(t.solicitado)}</td><td class="r">${t.encontradas}</td><td class="r">${fmt(t.recibido)}</td><td>${t.encontradas ? `<span class="tag ${t.pct >= .95 ? 'verde' : t.pct >= .8 ? 'amarillo' : 'rojo'}">${pct(t.pct)}</span>` : '<span class="tag gray">Pendiente</span>'}</td><td class="small">${esc(t.archivo)}</td></tr>`).join('') || '<tr><td colspan="8" class="empty">Aún no hay solicitudes exportadas.</td></tr>'}</tbody></table></div></section>`;
 }
@@ -1271,7 +1274,7 @@ async function exportOC() {
   await writeFile(S.dir, 'OC Manuales/Solicitudes/' + name, buf);
   const sol = { fecha: new Date().toISOString(), formato: tab === '37' ? 'Directas 810' : 'CEDI 81' + tab.slice(-1), archivo: name, lines: act.map(l => ({ s: l.c.s, i: l.c.item, clave: l.c.clave, qty: +l.qty, cancel: l.cancel || S.ocCediDate })) };
   const datos = await sub(S.dir, '_datos', true); await writeJSON(datos, 'solicitudes/' + stamp(sol.fecha) + '_' + tab + '.json', sol);
-  S.solicitudes.push(sol); S.track = Core.trackOC(S.solicitudes, S.data.fr);
+  S.solicitudes.push(sol); S.track = Core.trackOC(S.solicitudes, S.data.fr, S.params);
   render(); toast('Guardado en OC Manuales\\Solicitudes\\' + name, 6000);
 }
 /* ---------- Ajuste FCST ---------- */
@@ -1388,7 +1391,7 @@ function vParam() {
     ${P.eventos.map((e, i) => { const b = 'eventos.' + i + '.'; const fix = e.tipo !== 'fecha'; return `<tr><td><input type="text" data-p="${b}nombre" data-txt="1" value="${esc(e.nombre)}"></td><td>${fix ? (e.tipo === 'cuaresma' ? 'Cuaresma (auto)' : 'Semana Santa (auto)') : 'Fecha fija'}</td><td>${fix ? '—' : `<input type="number" min="1" max="12" data-p="${b}mes" value="${e.mes}" style="width:60px">`}</td><td>${fix ? '—' : `<input type="number" min="1" max="31" data-p="${b}dia" value="${e.dia}" style="width:60px">`}</td><td class="r"><input type="number" data-p="${b}pct" value="${e.pct}" style="width:70px"></td><td><input type="checkbox" data-p="${b}activo" ${e.activo !== false ? 'checked' : ''} aria-label="Activo ${esc(e.nombre)}"></td><td>${fix ? '' : `<a data-act="delEv" data-i="${i}">Eliminar</a>`}</td></tr>`; }).join('')}</tbody></table></div>
     <div class="pager muted">El aumento se aplica a la demanda estimada de la semana que contiene la fecha. Los % iniciales son provisionales.</div></section></div>`; }
   if (t === 'ordenes') { const seen = new Set(Object.keys(P.poEvents)); if (S.data) for (const L in S.data.fr) Object.keys(S.data.fr[L].eventos).forEach(e => seen.add(e));
-    body = `<section class="card" style="max-width:720px"><div class="pad"><h2>Clasificación de PO Events</h2><div class="small muted" style="margin-top:4px">Cuando identifiques el código de tus OC manuales, márcalo como "Manual solicitada".</div></div><div class="tw"><table><thead><tr><th>PO Event</th><th>Clase</th></tr></thead><tbody>
+    body = `<section class="card" style="max-width:720px"><div class="pad"><h2>Clasificación de PO Events</h2><div class="small muted" style="margin-top:4px">TDMANUAL43 = tus OC manuales solicitadas desde la app. Si una solicitud futura llega con otro número, márcalo aquí como "Manual solicitada".</div></div><div class="tw"><table><thead><tr><th>PO Event</th><th>Clase</th></tr></thead><tbody>
     ${Array.from(seen).sort().map(ev => `<tr><td>${esc(ev)}</td><td><select data-p="poEvents.${esc(ev)}" data-txt="1">${[['auto', 'Automática'], ['manualWalmart', 'Manual Walmart'], ['manualPropia', 'Manual solicitada'], ['otra', 'Otra (no cuenta)']].map(([v, n]) => `<option value="${v}" ${Core.poClass(ev, P) === v ? 'selected' : ''}>${n}</option>`).join('')}</select></td></tr>`).join('')}</tbody></table></div></section>`; }
   if (t === 'vendor') body = `<section class="card pad" style="max-width:640px"><h2 style="margin-bottom:14px">Datos del proveedor en los formatos</h2><div class="grid1" style="grid-template-columns:1fr 260px">
    <span>VNDL1 (Directas)</span><input type="text" data-p="vendor.vndl1" data-txt="1" value="${esc(P.vendor.vndl1)}">

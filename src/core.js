@@ -102,7 +102,7 @@ Core.defaultParams = function () {
       { id: 'nino', nombre: 'Día del Niño', tipo: 'fecha', mes: 10, dia: 1, pct: 5, activo: true },
       { id: 'santos', nombre: 'Todos los Santos', tipo: 'fecha', mes: 11, dia: 1, pct: 10, activo: true }
     ],
-    poEvents: { 'POS REPLEN': 'auto', 'ANULADA': 'otra', 'APERT_A': 'otra' }, // resto TDMANUAL* = manual Walmart
+    poEvents: { 'POS REPLEN': 'auto', 'ANULADA': 'otra', 'APERT_A': 'otra', 'TDMANUAL43': 'manualPropia' }, // resto TDMANUAL* = manual Walmart
     items: {},   // clave -> {...}
     stores: {},  // tienda -> overrides {offset, estado, type, vigencia}
     formato: { font: 'Calibri', size: 12, header: '4F81BD', headerFont: 'FFFFFF', band: 'D9D9D9' },
@@ -598,9 +598,12 @@ Core.compareFrecuencias = function (freq, frWeeks, params) {
 };
 
 /* seguimiento de OC solicitadas contra lo recibido (Fill Rate) */
-Core.trackOC = function (solicitudes, frWeeks) {
-  const lines = [];
+Core.trackOC = function (solicitudes, frWeeks, params) {
+  let lines = [];
   for (const L in frWeeks || {}) for (const m of frWeeks[L].manual) lines.push(m);
+  /* si ya hay órdenes clasificadas como "Manual solicitada", se comparan solo contra esas */
+  const propias = lines.filter(m => Core.poClass(m.ev, params) === 'manualPropia');
+  if (propias.length) lines = propias;
   return (solicitudes || []).map(sol => {
     let sol_u = 0, rec = 0, enc = 0;
     for (const l of sol.lines) {
