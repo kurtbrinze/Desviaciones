@@ -96,7 +96,7 @@ td.zero{background:var(--rbg);color:var(--rtx);font-weight:700}td.ocd{box-shadow
 <script>/*__CORE__*/</script>
 <script>
 'use strict';
-const VERSION = 'V.6';
+const VERSION = 'V.7';
 const $ = s => document.querySelector(s);
 const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmt = (n, d = 0) => n == null || isNaN(n) ? '—' : Number(n).toLocaleString('es-GT', { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -280,6 +280,38 @@ function analizar() {
   S.cmpFreq = Core.compareFrecuencias(S.data.masters.freq, S.data.fr, S.params);
   S.track = Core.trackOC(S.solicitudes, S.data.fr, S.params);
   if (!S.ocCediDate) S.ocCediDate = Core.ymd(Core.addDays(Core.parseISO(S.A.t0), S.params.general.cancelCedi));
+  publicarResumen();
+}
+/* Resumen para la tarjeta de Desviaciones en el Centro de Control: Fill Rate
+   de la última semana contra el objetivo (y la anterior, para la flecha),
+   combinaciones con alerta con las 3 más urgentes, OC manuales que hacen
+   falta, venta vs FCST de la última semana y el próximo evento. Se deja en
+   localStorage —el centro sirve esta app desde su mismo sitio y lo lee
+   directo— y se avisa al centro por postMessage. */
+function publicarResumen() {
+  try {
+    const A = S.A; if (!A) return;
+    const G = S.params.general;
+    const frDe = (sum, t) => { const x = (sum || []).find(o => o.t === t && o.cls === 'auto'); return x && x.ord ? x.rec / x.ord : null; };
+    const frL = Object.keys(S.data.fr).map(Number).sort((a, b) => b - a);
+    const ant = frL[1] ? Core.frSummary(S.data.fr[frL[1]], S.params) : null;
+    const fill = [[37, 'Directas'], [33, 'CEDI']].map(([t, nombre]) => ({ nombre, valor: frDe(S.frSum, t), anterior: frDe(ant, t), objetivo: G.frObj[t] / 100 }));
+    const alertas = A.combos.filter(c => c.estado !== 'verde');
+    const rojos = alertas.filter(c => c.estado === 'rojo');
+    const lw = A.ventaWeeks[0]; let vt = 0, ft = 0;
+    if (lw) for (const c of A.combos) { const h = c.hist.find(x => x.label === lw); if (h) { vt += h.pos; if (h.fcst != null) ft += h.fcst; } }
+    let evento = null;
+    for (let i = 0; i < 8 && !evento; i++) { const Lb = Core.weekAdd(A.week, i, S.params.fyOverrides); const u = Core.weekUplift(Lb, S.params.eventos, S.params.fyOverrides); if (u.pct > 0) evento = { semana: Lb, nombres: u.nombres, pct: u.pct }; }
+    const msg = { v: 1, app: 'desviaciones', actualizado: new Date().toISOString(), datos: {
+      semana: A.week, frSemana: S.frWeek, fill,
+      alertas: { total: alertas.length, rojo: rojos.length, amarillo: alertas.filter(c => c.estado === 'amarillo').length,
+        top: alertas.slice(0, 3).map(c => ({ estado: c.estado, tienda: c.s, nombre: c.name || '', clave: c.clave, riesgo: c.lostPost || c.lost7 || 0, motivo: c.motivo || '' })) },
+      ocManuales: { combinaciones: rojos.length, unidades: rojos.reduce((a, c) => a + (c.lostPost || 0), 0) },
+      ventaFcst: lw ? { semana: lw, venta: vt, fcst: ft || null } : null,
+      evento } };
+    localStorage.setItem('cc.insight.desviaciones', JSON.stringify(msg));
+    if (window.parent !== window) window.parent.postMessage({ tipo: 'cc:insight', id: 'desviaciones', insight: msg }, '*');
+  } catch (e) { /* el resumen nunca debe romper la app */ }
 }
 async function saveParams(reload) {
   if (!S.dir) { toast('Conecta la carpeta del proyecto para guardar.'); return; }
