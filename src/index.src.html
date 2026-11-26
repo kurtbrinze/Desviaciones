@@ -110,7 +110,7 @@ const ESTADO_TXT = { rojo: '● Rojo', amarillo: '▲ Amarillo', verde: '✓ Ver
 const S = {
   dir: null, frDir: null, params: Core.defaultParams(), data: null, A: null, view: 'resumen',
   filt: { canal: '', vendedor: '', formato: '', clave: '', estado: '', motivo: '', q: '', mant: false }, page: 1, sortKey: '',
-  detKey: null, ocEdits: {}, ocExtra: [], fcEdits: {}, ocTab: '37', ocCediDate: '', paramTab: 'general', fcMot: null,
+  detKey: null, ocEdits: {}, ocExtra: [], fcEdits: {}, ocTab: '37', ocCediDate: '', paramTab: 'general', fcMot: null, trackOpen: null,
   log: [], status: {}, solicitudes: [], track: [], cmpFreq: [], frSum: null, frWeek: null, chart: null
 };
 try { const d = JSON.parse(localStorage.getItem('ad_borrador') || '{}'); S.ocEdits = d.ocEdits || {}; S.ocExtra = d.ocExtra || []; S.fcEdits = d.fcEdits || {}; } catch (e) { }
@@ -234,14 +234,14 @@ async function actualizar(force) {
     if (S.frDir) {
       const ok = (await S.frDir.queryPermission({ mode: 'read' })) === 'granted';
       if (ok) {
-        const have = new Set((await jsonNames(await sub(datos, 'fr', true))).map(n => +n.replace('.json', '')));
+        const have = new Set((await jsonNames(await sub(datos, 'fr2', true))).map(n => +n.replace('.json', '')));
         const cands = [];
         const scan = async (d) => { for (const [n, h] of await entries(d)) { if (h.kind === 'directory' && /^\d{4}$/.test(n)) await scan(h); else if (h.kind === 'file') { const m = n.match(/^FR SMW (\d{6}) Combinacion\.xlsx$/i); if (m) cands.push([+m[1], h]); } } };
         await scan(S.frDir);
         for (const [L, h] of cands) {
           if (!need.includes(L) || (have.has(L) && !force)) continue;
           busy(true, 'Leyendo Fill Rate ' + L + '…');
-          try { const { wb } = await readBook(h); const p = Core.parseFr(sheetRows(wb, 'DSS') || [], L, S.params); await writeJSON(datos, 'fr/' + L + '.json', p); log('✓ Fill Rate semana ' + L); nuevos++; }
+          try { const { wb } = await readBook(h); const p = Core.parseFr(sheetRows(wb, 'DSS') || [], L, S.params); await writeJSON(datos, 'fr2/' + L + '.json', p); log('✓ Fill Rate semana ' + L); nuevos++; }
           catch (e) { log('✗ Fill Rate ' + L + ': ' + e.message); }
         }
       } else log('⚠ Falta permiso para la carpeta de Fill Rate (usa "Reabrir carpetas")');
@@ -252,7 +252,7 @@ async function actualizar(force) {
     const load = async (folder, n, numeric) => { const d = await sub(datos, folder, true); const names = await jsonNames(d); const pick = names.slice(-n); const out = []; for (const nm of pick) { const j = await readJSON(d, nm); if (j) out.push([nm.replace('.json', ''), j]); } return out; };
     const venta = Object.fromEntries((await load('venta', 10)).map(([k, v]) => [+k, v]));
     const dev = Object.fromEntries((await load('devoluciones', 10)).map(([k, v]) => [+k, v]));
-    const fr = Object.fromEntries((await load('fr', 6)).map(([k, v]) => [+k, v]));
+    const fr = Object.fromEntries((await load('fr2', 6)).map(([k, v]) => [+k, v]));
     const fcstSnaps = (await load('fcst', 6)).map(x => x[1]);
     const dss = ((await load('dss', 1))[0] || [])[1] || null;
     const instock = ((await load('instock', 1))[0] || [])[1] || null;
@@ -547,9 +547,9 @@ function vOC() {
   <span class="small muted">${tab === '37' ? 'Al exportar se agregan VNDL1 ' + V.vndl1 + ', vendor y TYPE 37 DIRECTO' : 'Al exportar se agregan vendor ' + V.base9 + tab.slice(-1) + ', secuencia 81' + tab.slice(-1) + ' y order type 73'} · desmarca lo que no quieras enviar</span></div>
   <div class="tw"><table><thead><tr>${head}</tr></thead><tbody>${tl.map(row).join('') || `<tr><td colspan="14" class="empty">Sin líneas sugeridas para este formato.</td></tr>`}</tbody></table></div>
   <div class="pager"><span class="muted">${act.length} de ${tl.length} líneas incluidas · para agregar una combinación, ábrela en Detalle</span><b>Total ${fmt(act.reduce((a, l) => a + (+l.qty || 0), 0))} u</b></div></section>
-  <section class="card"><div class="pad"><h2>Seguimiento de solicitudes anteriores</h2><div class="small muted" style="margin-top:4px">Se compara con las órdenes "Manual solicitada" del Fill Rate (TDMANUAL43), cancel date ±2 días. Se actualiza con el Fill Rate de cada martes.</div></div>
-  <div class="tw"><table><thead><tr><th>Solicitud</th><th>Formato</th><th class="r">Líneas</th><th class="r">Solicitado</th><th class="r">Encontradas en FR</th><th class="r">Recibido</th><th>Cumplimiento</th><th>Archivo</th></tr></thead>
-  <tbody>${tr.map(t => `<tr><td>${esc(new Date(t.fecha).toLocaleDateString('es-GT'))}</td><td>${esc(t.formato)}</td><td class="r">${t.lines.length}</td><td class="r">${fmt(t.solicitado)}</td><td class="r">${t.encontradas}</td><td class="r">${fmt(t.recibido)}</td><td>${t.encontradas ? `<span class="tag ${t.pct >= .95 ? 'verde' : t.pct >= .8 ? 'amarillo' : 'rojo'}">${pct(t.pct)}</span>` : '<span class="tag gray">Pendiente</span>'}</td><td class="small">${esc(t.archivo)}</td></tr>`).join('') || '<tr><td colspan="8" class="empty">Aún no hay solicitudes exportadas.</td></tr>'}</tbody></table></div></section>`;
+  <section class="card"><div class="pad"><h2>Seguimiento de solicitudes anteriores</h2><div class="small muted" style="margin-top:4px">Se compara con las órdenes "Manual solicitada" del Fill Rate (TDMANUAL43). Si Walmart dividió la OC en varias PO o cancel dates, se suman todas. Clic en una solicitud para ver el detalle. Se actualiza con el Fill Rate de cada martes.</div></div>
+  <div class="tw"><table><thead><tr><th>Solicitud</th><th>Formato</th><th class="r">Líneas</th><th class="r">Solicitado</th><th class="r">Encontradas</th><th class="r">Divididas</th><th class="r">Pedido Walmart</th><th class="r">Recibido</th><th>Cumplimiento</th><th>Archivo</th></tr></thead>
+  <tbody>${tr.map(t => { const open = S.trackOpen === t.fecha + t.formato; return `<tr class="click" data-track="${esc(t.fecha + t.formato)}" tabindex="0"><td>${open ? '▾' : '▸'} ${esc(new Date(t.fecha).toLocaleDateString('es-GT'))}</td><td>${esc(t.formato)}</td><td class="r">${t.lines.length}</td><td class="r">${fmt(t.solicitado)}</td><td class="r">${t.encontradas} de ${t.lines.length}</td><td class="r">${t.divididas || '—'}</td><td class="r">${t.encontradas ? fmt(t.pedido) : '—'}</td><td class="r">${t.encontradas ? fmt(t.recibido) : '—'}</td><td>${t.encontradas ? `<span class="tag ${t.pct >= .95 ? 'verde' : t.pct >= .8 ? 'amarillo' : 'rojo'}">${pct(t.pct)}</span>` : '<span class="tag gray">Pendiente</span>'}</td><td class="small">${esc(t.archivo)}</td></tr>` + (open ? `<tr><td colspan="10" style="background:#FAFAF9;padding:0"><div class="tw"><table><thead><tr><th>Tienda</th><th>Clave</th><th>Item</th><th class="r">Solicitado</th><th>Cancel solicitado</th><th>PO Walmart · cancel date</th><th class="r">Pedido</th><th class="r">Recibido</th><th>Estado</th></tr></thead><tbody>${t.det.map(d => { const c = S.A && S.A.combos.find(x => x.s === d.s && x.item === d.i); const st = !d.pos.length ? '<span class="tag gray">Sin PO aún</span>' : d.rec >= d.qty * .95 ? '<span class="tag verde">✓ Completa</span>' : d.rec > 0 ? '<span class="tag amarillo">▲ Parcial</span>' : '<span class="tag rojo">● Sin recibir</span>'; return `<tr><td>${d.s} ${esc(c ? c.name : '')}</td><td>${esc(d.clave || '')}</td><td>${d.i}</td><td class="r">${fmt(d.qty)}</td><td>${fdate(d.cancel)}</td><td class="small">${d.pos.map(p => esc(p.po) + ' · ' + fdate(p.ca) + ' (' + fmt(p.ord) + ')').join('<br>') || '—'}</td><td class="r">${d.pos.length ? fmt(d.ord) : '—'}</td><td class="r">${d.pos.length ? fmt(d.rec) : '—'}</td><td>${st}</td></tr>`; }).join('')}</tbody></table></div></td></tr>` : ''); }).join('') || '<tr><td colspan="10" class="empty">Aún no hay solicitudes exportadas.</td></tr>'}</tbody></table></div></section>`;
 }
 /* ---------- Excel con el formato de la casa (Parámetros › Formato Excel) ---------- */
 function utcDate(s) { const d = Core.parseISO(s); return d ? new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())) : null; }
@@ -706,7 +706,8 @@ function vParam() {
    <span>Devolución alta (% de la venta)</span>${inp('general.devAltaPct')}
    <span>Fill rate bajo: puntos bajo el objetivo</span>${inp('general.frBajoPts')}
    <span>Vida útil por defecto (días)</span>${inp('general.vidaUtil')}
-   <span>Cancel date CEDI: días desde hoy</span>${inp('general.cancelCedi')}</div></section></div>`;
+   <span>Cancel date CEDI: días desde hoy</span>${inp('general.cancelCedi')}
+   <span>Seguimiento OC: días de tolerancia después del cancel solicitado</span>${inp('general.seguimientoDias')}</div></section></div>`;
   if (t === 'items') { const it = Object.values(P.items).sort((a, b) => a.clave.localeCompare(b.clave));
     body = `<section class="card"><div class="between pad" style="align-items:center"><h2>Items</h2><button class="btn ghost" data-act="addItem">Agregar item</button></div><div class="tw"><table><thead><tr><th>Clave</th><th>Descripción</th><th>CID</th><th>Item Directo</th><th>Item CD</th><th>Vendor CD</th><th>Código OC Directa</th><th>Descripción OC Directa</th><th>Vida útil</th><th>VNPK</th><th>Activo</th><th></th></tr></thead><tbody>
     ${it.map(x => { const b = 'items.' + x.clave + '.'; const ti = (f, w) => `<input type="text" data-p="${b + f}" data-txt="1" value="${esc(x[f] == null ? '' : x[f])}" style="width:${w}px">`; const nu = (f, w) => `<input type="number" data-p="${b + f}" value="${esc(x[f] == null ? '' : x[f])}" style="width:${w}px">`;
@@ -747,6 +748,7 @@ function vParam() {
 document.addEventListener('click', async e => {
   const v = e.target.closest('[data-view]'); if (v) { S.view = v.dataset.view; render(); window.scrollTo(0, 0); return; }
   const det = e.target.closest('[data-det]'); if (det && !e.target.closest('input')) { S.detKey = det.dataset.det; S.view = 'detalle'; render(); window.scrollTo(0, 0); return; }
+  const tk = e.target.closest('[data-track]'); if (tk) { S.trackOpen = S.trackOpen === tk.dataset.track ? null : tk.dataset.track; render(); return; }
   const t = e.target.closest('[data-octab]'); if (t) { S.ocTab = t.dataset.octab; render(); return; }
   const pt = e.target.closest('[data-ptab]'); if (pt) { S.paramTab = pt.dataset.ptab; render(); return; }
   const a = e.target.closest('[data-act]'); if (!a || a.tagName === 'SELECT' || a.tagName === 'INPUT') return;

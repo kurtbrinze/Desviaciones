@@ -90,7 +90,7 @@ Core.defaultParams = function () {
       frObj: { 37: 95, 33: 95 }, diasInv: { 37: 4, 33: 5 }, leadTime: { 37: 1, 33: 3 },
       diasSeguridad: { 37: 1, 33: 1 }, sesgoSemanas: 3, desvMinPct: 20, desvMinU: 5,
       vidaUtil: 21, horizonteRojo: 7, devAltaPct: 10, frBajoPts: 10, diasFallback: [1, 4],
-      cancelCedi: 4
+      cancelCedi: 4, seguimientoDias: 4
     },
     fyOverrides: {},
     eventos: [
@@ -244,7 +244,7 @@ Core.parseFr = function (rows, week, params) {
       if (ca) { const st = stores[s] || (stores[s] = { t, ca: {}, lt: {} }); st.ca[ca.getDay()] = 1; if (cr) { const lt = diffDays(ca, cr); st.lt[lt] = (st.lt[lt] || 0) + 1; } }
     } else {
       x.om += ord; x.rm += rec;
-      manual.push({ s, i, ev, ca: ca && ymd(ca), ord, rec });
+      manual.push({ s, i, ev, po: str(r[c['PO Number']]), cr: cr && ymd(cr), ca: ca && ymd(ca), ord, rec });
     }
   }
   return { kind: 'fr', week, combos, stores, manual, eventos };
@@ -598,21 +598,39 @@ Core.compareFrecuencias = function (freq, frWeeks, params) {
 };
 
 /* seguimiento de OC solicitadas contra lo recibido (Fill Rate) */
+/* seguimiento de OC solicitadas contra el Fill Rate.
+   Una solicitud puede llegar dividida en varias PO (distinto cancel date): se suman todas las PO de la
+   misma tienda + item con cancel date entre (cancel solicitado − 2) y (cancel solicitado + tolerancia),
+   creadas desde la fecha de la solicitud. Cada PO se asigna a una sola solicitud (la más cercana). */
 Core.trackOC = function (solicitudes, frWeeks, params) {
+  const tol = num((params && params.general && params.general.seguimientoDias) || 4);
   let lines = [];
-  for (const L in frWeeks || {}) for (const m of frWeeks[L].manual) lines.push(m);
-  /* si ya hay órdenes clasificadas como "Manual solicitada", se comparan solo contra esas */
+  for (const L in frWeeks || {}) for (const m of frWeeks[L].manual) lines.push(Object.assign({ week: +L }, m));
   const propias = lines.filter(m => Core.poClass(m.ev, params) === 'manualPropia');
   if (propias.length) lines = propias;
-  return (solicitudes || []).map(sol => {
-    let sol_u = 0, rec = 0, enc = 0;
-    for (const l of sol.lines) {
-      sol_u += l.qty;
-      const c = lines.filter(m => m.s === l.s && m.i === l.i && m.ca && Math.abs(diffDays(parseISO(m.ca), parseISO(l.cancel))) <= 2);
-      if (c.length) { enc++; rec += c.reduce((a, m) => a + m.rec, 0); }
-    }
-    return { ...sol, solicitado: sol_u, recibido: rec, encontradas: enc, pct: sol_u ? rec / sol_u : null };
+  /* una PO puede repetirse si aparece en dos archivos semanales: se queda la versión más reciente */
+  const byKey = {};
+  for (const m of lines) { const k = (m.po || '') + '|' + m.s + '|' + m.i + '|' + m.ca; if (!byKey[k] || byKey[k].week < m.week) byKey[k] = m; }
+  lines = Object.values(byKey);
+  const used = new Set();
+  const sols = (solicitudes || []).slice().sort((a, b) => a.fecha < b.fecha ? -1 : 1);
+  const out = sols.map(sol => {
+    const fSol = midnight(new Date(sol.fecha));
+    let solU = 0, ord = 0, rec = 0, enc = 0, splits = 0;
+    const det = sol.lines.map(l => {
+      solU += l.qty;
+      const lc = parseISO(l.cancel);
+      const cand = lines.filter(m => !used.has(m) && m.s === l.s && m.i === l.i && m.ca && lc &&
+        diffDays(parseISO(m.ca), lc) >= -2 && diffDays(parseISO(m.ca), lc) <= tol && (!m.cr || parseISO(m.cr) >= addDays(fSol, -1)));
+      cand.forEach(m => used.add(m));
+      const o = cand.reduce((a, m) => a + m.ord, 0), r = cand.reduce((a, m) => a + m.rec, 0);
+      if (cand.length) { enc++; ord += o; rec += r; }
+      if (new Set(cand.map(m => m.po + m.ca)).size > 1) splits++;
+      return { s: l.s, i: l.i, clave: l.clave, qty: l.qty, cancel: l.cancel, pos: cand.map(m => ({ po: m.po, ca: m.ca, ord: m.ord, rec: m.rec, ev: m.ev })).sort((a, b) => a.ca < b.ca ? -1 : 1), ord: o, rec: r };
+    });
+    return Object.assign({}, sol, { solicitado: solU, pedido: ord, recibido: rec, encontradas: enc, divididas: splits, pct: solU && enc ? rec / solU : null, det });
   });
+  return out;
 };
 
 if (typeof module !== 'undefined' && module.exports) module.exports = Core; else root.Core = Core;
