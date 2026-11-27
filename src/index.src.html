@@ -4,14 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Análisis Desviaciones · PANISA</title>
-<meta name="theme-color" content="#1F2733">
+<meta name="theme-color" content="#0D0F12">
 <meta name="description" content="Venta vs FCST Walmart por combinación tienda + item, OC manuales y ajustes de FCST.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<script>(function(){var h=document.documentElement,t='oscuro';try{if(window.top!==window.self)h.classList.add('rz-en-centro')}catch(_){h.classList.add('rz-en-centro')}try{t=localStorage.getItem('rz.tema')||t}catch(_){}try{if(window.top!==window.self)t=window.top.localStorage.getItem('rz.tema')||t}catch(_){}h.setAttribute('data-tema',t)})();</script>
+<link rel="stylesheet" href="https://centrocontrolpana.vercel.app/tema/rinze-tema.css">
 <style>
-:root{--bg:#F5F5F3;--card:#FFFFFF;--line:#E3E5E8;--line2:#EEF0F2;--tx:#1F2328;--mut:#5B636E;--acc:#2F3A4A;--nav:#1F2733;
---r:#C62828;--rbg:#FDECEA;--rtx:#A61B1B;--y:#D98A00;--ybg:#FFF2DB;--ytx:#7A4A00;--g:#2E7D32;--gbg:#E8F2EA;--gtx:#22582B}
+:root{/* Tema global Rinze (Grafito & Plata); los valores de respaldo son los mismos. */
+--bg:var(--rz-bg,#0D0F12);--card:var(--rz-card,#16191E);--line:var(--rz-card-borde,#262A32);--line2:var(--rz-linea,#262A32);--tx:var(--rz-tx,#F3F4F6);--mut:var(--rz-tx2,#9CA3AF);--acc:var(--rz-link,#D1D5DB);--nav:var(--rz-card,#16191E);
+--r:var(--rz-crit,#F87171);--rbg:var(--rz-crit-bg,rgba(220,38,38,.15));--rtx:var(--rz-crit,#F87171);--y:var(--rz-warn,#FBBF24);--ybg:var(--rz-warn-bg,rgba(217,119,6,.15));--ytx:var(--rz-warn,#FBBF24);--g:var(--rz-ok,#4ADE80);--gbg:var(--rz-ok-bg,rgba(22,163,74,.15));--gtx:var(--rz-ok,#4ADE80)}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--tx);font-family:Inter,"Segoe UI",system-ui,sans-serif;font-size:14px}
 a{color:var(--acc);text-decoration:none;cursor:pointer}a:hover{color:#11161D;text-decoration:underline}
@@ -46,7 +49,7 @@ select,input[type=text],input[type=number],input[type=date],input:not([type]){fo
 input.num{width:76px;text-align:right;padding:4px 6px;border-radius:6px}
 .tw{overflow-x:auto}
 table{border-collapse:collapse;width:100%}
-th{font-size:11px;font-weight:600;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);background:#FAFAF9;white-space:nowrap}
+th{font-size:11px;font-weight:600;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);background:#1F232B;white-space:nowrap}
 td{font-size:13px;padding:9px 12px;border-bottom:1px solid var(--line2);white-space:nowrap}
 td.r,th.r{text-align:right}td.c,th.c{text-align:center}
 tr.click{cursor:pointer}tr.click:hover td{background:#F7F8FA}
@@ -63,7 +66,7 @@ dl.kv{margin:0;display:grid;grid-template-columns:1fr auto;gap:9px 12px;font-siz
 td.zero{background:var(--rbg);color:var(--rtx);font-weight:700}td.ocd{box-shadow:inset 0 -3px 0 var(--acc)}
 .desc{max-width:280px;overflow:hidden;text-overflow:ellipsis}
 .empty{padding:40px;text-align:center;color:var(--mut)}
-.log{font-family:ui-monospace,Consolas,monospace;font-size:12px;max-height:260px;overflow:auto;white-space:pre-wrap;background:#FAFAF9;border-top:1px solid var(--line2);padding:12px 18px;margin:0}
+.log{font-family:ui-monospace,Consolas,monospace;font-size:12px;max-height:260px;overflow:auto;white-space:pre-wrap;background:#1F232B;border-top:1px solid var(--line2);padding:12px 18px;margin:0}
 #toast{position:fixed;right:20px;bottom:20px;background:var(--nav);color:#fff;padding:12px 16px;border-radius:10px;font-size:13px;display:none;max-width:420px;z-index:9}
 .grid2{display:grid;grid-template-columns:1fr 110px 110px;gap:10px 14px;align-items:center;font-size:13px}
 .grid1{display:grid;grid-template-columns:1fr 110px;gap:10px 14px;align-items:center;font-size:13px}
@@ -71,11 +74,86 @@ td.zero{background:var(--rbg);color:var(--rtx);font-weight:700}td.ocd{box-shadow
 .pager{display:flex;justify-content:space-between;align-items:center;padding:12px 18px;flex-wrap:wrap;gap:8px;font-size:13px}
 @media (max-width:700px){#nav{max-width:none;flex-basis:100%}#main{padding:20px 16px}}
 </style>
+<style id="rz-tema-oscuro">/* Tema Rinze · Grafito & Plata (copia de los estilos con los colores del tema; sólo pantalla) */
+@media screen{
+
+:root{/* Tema global Rinze (Grafito & Plata); los valores de respaldo son los mismos. */
+--bg:var(--rz-bg,#0D0F12);--card:var(--rz-card,#16191E);--line:var(--rz-card-borde,#262A32);--line2:var(--rz-linea,#262A32);--tx:var(--rz-tx,#F3F4F6);--mut:var(--rz-tx2,#9CA3AF);--acc:var(--rz-link,#D1D5DB);--nav:var(--rz-card,#16191E);
+--r:var(--rz-crit,#F87171);--rbg:var(--rz-crit-bg,rgba(220,38,38,.15));--rtx:var(--rz-crit,#F87171);--y:var(--rz-warn,#FBBF24);--ybg:var(--rz-warn-bg,rgba(217,119,6,.15));--ytx:var(--rz-warn,#FBBF24);--g:var(--rz-ok,#4ADE80);--gbg:var(--rz-ok-bg,rgba(22,163,74,.15));--gtx:var(--rz-ok,#4ADE80)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:Inter,"Segoe UI",system-ui,sans-serif;font-size:14px}
+a{color:var(--acc);text-decoration:none;cursor:pointer}a:hover{color:#D1D5DB;text-decoration:underline}
+#app{display:flex;flex-wrap:wrap;min-height:100vh}
+#nav{flex:1 1 220px;max-width:240px;background:var(--nav);color:#F3F4F6;padding:24px 16px;display:flex;flex-direction:column;gap:4px}
+#nav .brand{font-size:15px;font-weight:700;color:#F3F4F6;padding:0 12px 4px}
+#nav .sub{font-size:12px;color:#6B7280;padding:0 12px 20px}
+#nav button{all:unset;display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:8px;color:#F3F4F6;font-size:14px;cursor:pointer}
+#nav button:hover{background:#2B3039}#nav button.on{background:#2B3039;color:#F3F4F6;font-weight:600}
+#nav button:focus-visible{outline:2px solid #323741}
+#nav .ver{margin-top:auto;padding:16px 12px 0;font-size:12px;color:#6B7280}
+#main{flex:999 1 560px;min-width:0;padding:28px 32px;display:flex;flex-direction:column;gap:20px}
+h1{margin:4px 0 0;font-size:26px;font-weight:700}h2{margin:0;font-size:16px;font-weight:600}
+.eyebrow{font-size:12px;color:var(--mut);font-weight:500}
+.row{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start}
+.between{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px}
+.pad{padding:16px 18px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
+.kpi{padding:16px}.kpi .l{font-size:12px;color:var(--mut)}.kpi .v{font-size:28px;font-weight:700;margin-top:6px}.kpi .s{font-size:12px;color:var(--mut);margin-top:4px}
+.kpi.red{border-top:4px solid var(--r)}.kpi.yel{border-top:4px solid var(--y)}.kpi.grn{border-top:4px solid var(--g)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.chip{font-size:12px;padding:6px 10px;border-radius:999px;background:#262A32;color:var(--mut)}
+.chip.ok{background:var(--gbg);color:var(--gtx)}.chip.warn{background:var(--ybg);color:var(--ytx)}.chip.bad{background:var(--rbg);color:var(--rtx)}
+.btn{font:inherit;font-size:13px;font-weight:600;padding:9px 14px;border-radius:8px;border:1px solid var(--acc);background:var(--acc);color:#F3F4F6;cursor:pointer}
+.btn.sec{background:#16191E;color:var(--acc)}.btn.ghost{background:#16191E;color:var(--tx);border-color:#262A32;font-weight:500}
+.btn.red{background:var(--rtx);border-color:var(--rtx)}
+.btn:disabled{opacity:.5;cursor:default}
+.filters{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+label.f{font-size:12px;color:var(--mut)}
+select,input[type=text],input[type=number],input[type=date],input:not([type]){font:inherit;font-size:13px;padding:7px 10px;border:1px solid #262A32;border-radius:8px;background:#16191E;color:var(--tx)}
+input.num{width:76px;text-align:right;padding:4px 6px;border-radius:6px}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%}
+th{font-size:11px;font-weight:600;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);background:#1F232B;white-space:nowrap}
+td{font-size:13px;padding:9px 12px;border-bottom:1px solid var(--line2);white-space:nowrap}
+td.r,th.r{text-align:right}td.c,th.c{text-align:center}
+tr.click{cursor:pointer}tr.click:hover td{background:#1F232B}
+.tag{font-size:12px;font-weight:600;padding:3px 8px;border-radius:6px;display:inline-block}
+.tag.rojo{background:var(--rbg);color:var(--rtx)}.tag.amarillo{background:var(--ybg);color:var(--ytx)}.tag.verde{background:var(--gbg);color:var(--gtx)}
+.tag.gray{background:#262A32;color:var(--mut)}
+.bar{height:8px;background:var(--line2);border-radius:4px;margin-top:5px}.bar>div{height:8px;background:var(--acc);border-radius:4px}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.tabs button{font:inherit;font-size:14px;padding:10px 16px;border:none;border-bottom:3px solid transparent;background:transparent;color:var(--mut);cursor:pointer}
+.tabs button.on{border-bottom-color:var(--acc);color:var(--tx);font-weight:600}
+dl.kv{margin:0;display:grid;grid-template-columns:1fr auto;gap:9px 12px;font-size:13px}dl.kv dt{color:var(--mut)}dl.kv dd{margin:0;font-weight:600;text-align:right}
+.note{padding:10px 12px;border-radius:8px;background:var(--bg);font-size:13px}
+.muted{color:var(--mut)}.small{font-size:12px}
+td.zero{background:var(--rbg);color:var(--rtx);font-weight:700}td.ocd{box-shadow:inset 0 -3px 0 var(--acc)}
+.desc{max-width:280px;overflow:hidden;text-overflow:ellipsis}
+.empty{padding:40px;text-align:center;color:var(--mut)}
+.log{font-family:ui-monospace,Consolas,monospace;font-size:12px;max-height:260px;overflow:auto;white-space:pre-wrap;background:#1F232B;border-top:1px solid var(--line2);padding:12px 18px;margin:0}
+#toast{position:fixed;right:20px;bottom:20px;background:var(--nav);color:#F3F4F6;padding:12px 16px;border-radius:10px;font-size:13px;display:none;max-width:420px;z-index:9}
+.grid2{display:grid;grid-template-columns:1fr 110px 110px;gap:10px 14px;align-items:center;font-size:13px}
+.grid1{display:grid;grid-template-columns:1fr 110px;gap:10px 14px;align-items:center;font-size:13px}
+.busy{position:fixed;inset:0;background:rgba(245,245,243,.7);display:none;align-items:center;justify-content:center;z-index:8;font-weight:600}
+.pager{display:flex;justify-content:space-between;align-items:center;padding:12px 18px;flex-wrap:wrap;gap:8px;font-size:13px}
+@media (max-width:700px){#nav{max-width:none;flex-basis:100%}#main{padding:20px 16px}}
+
+}
+
+@media screen{.btn{background:var(--rz-pri,#F3F4F6);border-color:var(--rz-pri,#F3F4F6);color:var(--rz-pri-tx,#0D0F12)}
+.btn:hover:not(:disabled){background:var(--rz-pri-hover,#fff)}
+.btn.sec,.btn.ghost{background:var(--rz-elev,#1F232B);color:var(--rz-tx,#F3F4F6);border-color:var(--rz-elev-borde,#323741)}
+.btn.red{background:var(--rz-crit-bg);border-color:var(--rz-crit-borde);color:var(--rz-crit,#F87171)}
+#nav button.on{background:var(--rz-act,#262A32);color:#fff;box-shadow:inset 3px 0 0 var(--rz-act-ind,#E5E7EB)}
+.bar>div{background:var(--rz-tx2,#9CA3AF)}
+table,td,th{font-variant-numeric:tabular-nums}}
+</style>
 </head>
 <body>
 <div id="app">
 <nav id="nav" aria-label="Módulos">
-<div class="brand">Análisis Desviaciones</div>
+<div class="brand rz-solo-fuera">Análisis Desviaciones</div>
 <div class="sub">PANISA · Walmart GT</div>
 <button data-view="resumen"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Resumen</button>
 <button data-view="detalle"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg>Detalle combinación</button>
@@ -84,7 +162,7 @@ td.zero{background:var(--rbg);color:var(--rtx);font-weight:700}td.ocd{box-shadow
 <button data-view="carga"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg>Carga de datos</button>
 <button data-view="param"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>Parámetros</button>
 <button id="install" hidden><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 7v7M9 11l3 3 3-3"/></svg>Instalar app</button>
-<div class="ver" id="ver"></div>
+<div class="ver rz-solo-fuera" id="ver"></div>
 </nav>
 <main id="main" aria-live="polite"></main>
 </div>
@@ -96,7 +174,7 @@ td.zero{background:var(--rbg);color:var(--rtx);font-weight:700}td.ocd{box-shadow
 <script>/*__CORE__*/</script>
 <script>
 'use strict';
-const VERSION = 'V.7';
+const VERSION = 'V.8';
 const $ = s => document.querySelector(s);
 const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmt = (n, d = 0) => n == null || isNaN(n) ? '—' : Number(n).toLocaleString('es-GT', { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -490,14 +568,15 @@ function drawChart() {
   const fc = H.map(h => h.fcst).concat(F.map(L => c.fcstW[L]));
   const up = Object.fromEntries(c.uplifts.map(u => [u.L, u.pct]));
   const dem = H.map((h, i) => i === nH - 1 ? h.pos : null).concat(F.map(L => Math.round(c.dem * (1 + (up[L] || 0)))));
+  if (window.Chart) { Chart.defaults.color = '#9CA3AF'; Chart.defaults.borderColor = '#262A32'; }
   S.chart = new Chart(el, {
     data: { labels, datasets: [
       { type: 'bar', label: 'Venta real', data: venta, backgroundColor: '#9AA7B8', borderRadius: 3, order: 3 },
-      { type: 'line', label: 'FCST Walmart', data: fc, borderColor: '#2F3A4A', backgroundColor: '#2F3A4A', borderWidth: 2.5, pointRadius: 3, spanGaps: true, order: 1 },
+      { type: 'line', label: 'FCST Walmart', data: fc, borderColor: '#E5E7EB', backgroundColor: '#E5E7EB', borderWidth: 2.5, pointRadius: 3, spanGaps: true, order: 1 },
       { type: 'line', label: 'Demanda estimada', data: dem, borderColor: '#D98A00', backgroundColor: '#D98A00', borderDash: [6, 5], borderWidth: 2.5, pointRadius: 2, spanGaps: true, order: 2 }] },
     options: { maintainAspectRatio: false, animation: false, interaction: { mode: 'index', intersect: false },
       plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 12 } } }, tooltip: { callbacks: { label: x => x.dataset.label + ': ' + fmt(x.parsed.y, 1) } } },
-      scales: { y: { beginAtZero: true, grid: { color: '#EEF0F2' }, ticks: { font: { size: 11 } } }, x: { grid: { display: false }, ticks: { font: { size: 11 } } } } }
+      scales: { y: { beginAtZero: true, grid: { color: '#262A32' }, ticks: { font: { size: 11 } } }, x: { grid: { display: false }, ticks: { font: { size: 11 } } } } }
   });
 }
 /* ---------- OC manuales ---------- */
@@ -549,7 +628,7 @@ function vOC() {
   <div class="pager"><span class="muted">${act.length} de ${tl.length} líneas incluidas · para agregar una combinación, ábrela en Detalle</span><b>Total ${fmt(act.reduce((a, l) => a + (+l.qty || 0), 0))} u</b></div></section>
   <section class="card"><div class="pad"><h2>Seguimiento de solicitudes anteriores</h2><div class="small muted" style="margin-top:4px">Se compara con las órdenes "Manual solicitada" del Fill Rate (TDMANUAL43). Si Walmart dividió la OC en varias PO o cancel dates, se suman todas. Clic en una solicitud para ver el detalle. Se actualiza con el Fill Rate de cada martes.</div></div>
   <div class="tw"><table><thead><tr><th>Solicitud</th><th>Formato</th><th class="r">Líneas</th><th class="r">Solicitado</th><th class="r">Encontradas</th><th class="r">Divididas</th><th class="r">Pedido Walmart</th><th class="r">Recibido</th><th>Cumplimiento</th><th>Archivo</th></tr></thead>
-  <tbody>${tr.map(t => { const open = S.trackOpen === t.fecha + t.formato; return `<tr class="click" data-track="${esc(t.fecha + t.formato)}" tabindex="0"><td>${open ? '▾' : '▸'} ${esc(new Date(t.fecha).toLocaleDateString('es-GT'))}</td><td>${esc(t.formato)}</td><td class="r">${t.lines.length}</td><td class="r">${fmt(t.solicitado)}</td><td class="r">${t.encontradas} de ${t.lines.length}</td><td class="r">${t.divididas || '—'}</td><td class="r">${t.encontradas ? fmt(t.pedido) : '—'}</td><td class="r">${t.encontradas ? fmt(t.recibido) : '—'}</td><td>${t.encontradas ? `<span class="tag ${t.pct >= .95 ? 'verde' : t.pct >= .8 ? 'amarillo' : 'rojo'}">${pct(t.pct)}</span>` : '<span class="tag gray">Pendiente</span>'}</td><td class="small">${esc(t.archivo)}</td></tr>` + (open ? `<tr><td colspan="10" style="background:#FAFAF9;padding:0"><div class="tw"><table><thead><tr><th>Tienda</th><th>Clave</th><th>Item</th><th class="r">Solicitado</th><th>Cancel solicitado</th><th>PO Walmart · cancel date</th><th class="r">Pedido</th><th class="r">Recibido</th><th>Estado</th></tr></thead><tbody>${t.det.map(d => { const c = S.A && S.A.combos.find(x => x.s === d.s && x.item === d.i); const st = !d.pos.length ? '<span class="tag gray">Sin PO aún</span>' : d.rec >= d.qty * .95 ? '<span class="tag verde">✓ Completa</span>' : d.rec > 0 ? '<span class="tag amarillo">▲ Parcial</span>' : '<span class="tag rojo">● Sin recibir</span>'; return `<tr><td>${d.s} ${esc(c ? c.name : '')}</td><td>${esc(d.clave || '')}</td><td>${d.i}</td><td class="r">${fmt(d.qty)}</td><td>${fdate(d.cancel)}</td><td class="small">${d.pos.map(p => esc(p.po) + ' · ' + fdate(p.ca) + ' (' + fmt(p.ord) + ')').join('<br>') || '—'}</td><td class="r">${d.pos.length ? fmt(d.ord) : '—'}</td><td class="r">${d.pos.length ? fmt(d.rec) : '—'}</td><td>${st}</td></tr>`; }).join('')}</tbody></table></div></td></tr>` : ''); }).join('') || '<tr><td colspan="10" class="empty">Aún no hay solicitudes exportadas.</td></tr>'}</tbody></table></div></section>`;
+  <tbody>${tr.map(t => { const open = S.trackOpen === t.fecha + t.formato; return `<tr class="click" data-track="${esc(t.fecha + t.formato)}" tabindex="0"><td>${open ? '▾' : '▸'} ${esc(new Date(t.fecha).toLocaleDateString('es-GT'))}</td><td>${esc(t.formato)}</td><td class="r">${t.lines.length}</td><td class="r">${fmt(t.solicitado)}</td><td class="r">${t.encontradas} de ${t.lines.length}</td><td class="r">${t.divididas || '—'}</td><td class="r">${t.encontradas ? fmt(t.pedido) : '—'}</td><td class="r">${t.encontradas ? fmt(t.recibido) : '—'}</td><td>${t.encontradas ? `<span class="tag ${t.pct >= .95 ? 'verde' : t.pct >= .8 ? 'amarillo' : 'rojo'}">${pct(t.pct)}</span>` : '<span class="tag gray">Pendiente</span>'}</td><td class="small">${esc(t.archivo)}</td></tr>` + (open ? `<tr><td colspan="10" style="background:#1F232B;padding:0"><div class="tw"><table><thead><tr><th>Tienda</th><th>Clave</th><th>Item</th><th class="r">Solicitado</th><th>Cancel solicitado</th><th>PO Walmart · cancel date</th><th class="r">Pedido</th><th class="r">Recibido</th><th>Estado</th></tr></thead><tbody>${t.det.map(d => { const c = S.A && S.A.combos.find(x => x.s === d.s && x.item === d.i); const st = !d.pos.length ? '<span class="tag gray">Sin PO aún</span>' : d.rec >= d.qty * .95 ? '<span class="tag verde">✓ Completa</span>' : d.rec > 0 ? '<span class="tag amarillo">▲ Parcial</span>' : '<span class="tag rojo">● Sin recibir</span>'; return `<tr><td>${d.s} ${esc(c ? c.name : '')}</td><td>${esc(d.clave || '')}</td><td>${d.i}</td><td class="r">${fmt(d.qty)}</td><td>${fdate(d.cancel)}</td><td class="small">${d.pos.map(p => esc(p.po) + ' · ' + fdate(p.ca) + ' (' + fmt(p.ord) + ')').join('<br>') || '—'}</td><td class="r">${d.pos.length ? fmt(d.ord) : '—'}</td><td class="r">${d.pos.length ? fmt(d.rec) : '—'}</td><td>${st}</td></tr>`; }).join('')}</tbody></table></div></td></tr>` : ''); }).join('') || '<tr><td colspan="10" class="empty">Aún no hay solicitudes exportadas.</td></tr>'}</tbody></table></div></section>`;
 }
 /* ---------- Excel con el formato de la casa (Parámetros › Formato Excel) ---------- */
 function utcDate(s) { const d = Core.parseISO(s); return d ? new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())) : null; }
@@ -629,7 +708,7 @@ function vFcst() {
   <div class="chips"><button class="btn" data-act="fcExport">Exportar ${act.length} combinaciones</button></div></div>
   ${filterBar(true)}
   <section class="card pad"><div class="between" style="align-items:center"><h2>Motivos a incluir</h2><span class="chips"><button class="btn ghost" data-act="fcMotAll">Todos</button><button class="btn ghost" data-act="fcMotNone">Ninguno</button></span></div>
-   <div class="chips" style="margin-top:12px">${mots.map(([m, n]) => `<label class="chip" style="cursor:pointer;${!S.fcMot || S.fcMot.includes(m) ? 'background:#E3E8EF;color:var(--tx)' : ''}"><input type="checkbox" data-fc-mot="${esc(m)}" ${!S.fcMot || S.fcMot.includes(m) ? 'checked' : ''}> ${esc(m)} · ${n}</label>`).join('') || '<span class="muted small">Sin combinaciones con ajuste sugerido.</span>'}</div>
+   <div class="chips" style="margin-top:12px">${mots.map(([m, n]) => `<label class="chip" style="cursor:pointer;${!S.fcMot || S.fcMot.includes(m) ? 'background:#262A32;color:var(--tx)' : ''}"><input type="checkbox" data-fc-mot="${esc(m)}" ${!S.fcMot || S.fcMot.includes(m) ? 'checked' : ''}> ${esc(m)} · ${n}</label>`).join('') || '<span class="muted small">Sin combinaciones con ajuste sugerido.</span>'}</div>
    <div class="small muted" style="margin-top:8px">El reporte de Excel incluye solo los motivos marcados y las combinaciones con casilla activa.</div></section>
   <div class="kpis">
    <div class="card kpi"><div class="l">Subir FCST</div><div class="v">${act.filter(l => l.base > (l.c.fcst4 || 0)).length}</div><div class="s">venta sostenida sobre el pronóstico</div></div>
