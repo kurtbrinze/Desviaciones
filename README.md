@@ -37,3 +37,10 @@ resumen trae el Fill Rate de la última semana contra el objetivo, las
 combinaciones con alerta con las 3 más urgentes, las OC manuales que hacen
 falta, la venta vs FCST de la última semana y el próximo evento. Es lo que
 muestra la tarjeta de Desviaciones en el inicio del centro.
+
+## Items: tabla única Item NBR (V.11)
+Dentro del Centro de Control, los items Walmart → clave (Item Directo, Item CD, descripción,
+CID, EAN, activo) vienen de la tabla única **Item NBR** de Documentos (`rz.itemsWM` o
+`Crudos/Tablas/Item_NBR.json`). El ITEM_Data del Excel YF ya no se usa para items (solo
+STR_Data para tiendas). En Parámetros → Items solo se editan vida útil, VNPK, vendor CD y
+código/descripción de OC. Fuera del centro, sin la tabla, se usa el Excel YF como antes.

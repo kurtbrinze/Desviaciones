@@ -249,7 +249,7 @@ table,td,th{font-variant-numeric:tabular-nums}
 <script>/*__CORE__*/</script>
 <script>
 'use strict';
-const VERSION = 'V.10';
+const VERSION = 'V.11';
 const $ = s => document.querySelector(s);
 const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmt = (n, d = 0) => n == null || isNaN(n) ? '—' : Number(n).toLocaleString('es-GT', { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -298,6 +298,44 @@ async function jsonNames(dir) { return (await entries(dir)).filter(([n, h]) => h
 async function readBook(fh) { const f = await fh.getFile(); const wb = XLSX.read(await f.arrayBuffer(), { type: 'array' }); return { wb, file: f }; }
 const sheetRows = (wb, name) => { const ws = wb.Sheets[name || wb.SheetNames[0]]; return ws ? XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null }) : null; };
 
+/* ---------- tabla única Item NBR (Documentos del Centro) ----------
+   Dentro del centro vive en localStorage 'rz.itemsWM' (mismo sitio) y en Crudos/Tablas/Item_NBR.json. */
+async function itemsNBR() {
+  try { const l = JSON.parse(localStorage.getItem('rz.itemsWM') || 'null'); if (Array.isArray(l) && l.length) return { items: l, de: 'Documentos' }; } catch (e) { }
+  try {
+    const db = await new Promise((ok, mal) => { const r = indexedDB.open('centro_docs', 1); r.onupgradeneeded = () => r.transaction.abort(); r.onsuccess = () => ok(r.result); r.onerror = () => mal(r.error); });
+    if (!db.objectStoreNames.contains('carpetas')) { db.close(); return null; }
+    const h = await new Promise(ok => { const r = db.transaction('carpetas').objectStore('carpetas').get('crudos'); r.onsuccess = () => ok(r.result || null); r.onerror = () => ok(null); });
+    if (!h || (await h.queryPermission({ mode: 'read' })) !== 'granted') return null;
+    const j = await readJSON(h, 'Tablas/Item_NBR.json');
+    if (j && Array.isArray(j.items) && j.items.length) return { items: j.items, de: 'Crudos/Tablas/Item_NBR.json' };
+  } catch (e) { }
+  return null;
+}
+/* Pone en los parámetros lo que manda la tabla (items, descripción, CID, EAN, activo) y deja lo
+   propio de Desviaciones (vida útil, VNPK, vendor CD, código y descripción de OC). Una clave que
+   ya no está en la tabla se queda sin items y no se analiza. */
+function aplicarItemsNBR(lista) {
+  const porClave = {};
+  for (const x of lista) {
+    const c = String(x.clave || '').trim().toUpperCase().replace(/\s*CD$/i, ''); const n = +String(x.item || '').replace(/\.0+$/, ''); if (!c || !n) continue;
+    const o = porClave[c] || (porClave[c] = { cid: null, ean: '', desc: '', itemD: null, itemC: null, activo: false });
+    const cross = String(x.tipo) === '33' || /cross/i.test(x.canal || '');
+    if (cross) o.itemC = n; else o.itemD = n;
+    if (!o.cid && x.cid) o.cid = +x.cid || null; if (!o.ean && x.ean) o.ean = String(x.ean); if (!o.desc && x.desc) o.desc = String(x.desc);
+    if (x.activo !== false) o.activo = true;
+  }
+  for (const k in S.params.items) if (!porClave[k]) { const it = S.params.items[k]; it.itemD = null; it.itemC = null; it.activo = false; }
+  for (const [c, o] of Object.entries(porClave)) {
+    const cur = S.params.items[c] || (S.params.items[c] = { clave: c, seqC: null, codigoOC: c.replace(/^\d+(?=[A-Z])/i, ''), descOC: o.desc, vida: null, vnpk: 1 });
+    Object.assign(cur, o, { clave: c });
+    if (!cur.descOC) cur.descOC = o.desc;
+  }
+  return Object.keys(porClave).length;
+}
+/* Si Documentos cambia la tabla mientras Desviaciones está abierta, se vuelve a analizar. */
+addEventListener('storage', e => { if (e.key === 'rz.itemsWM' && S.dir) actualizar(false); });
+
 /* ---------- conexión de carpetas ---------- */
 const fsOK = 'showDirectoryPicker' in window;
 async function verify(h, mode) { if (!h) return false; const o = { mode }; if ((await h.queryPermission(o)) === 'granted') return true; return (await h.requestPermission(o)) === 'granted'; }
@@ -341,16 +379,24 @@ async function actualizar(force) {
     const masters = { items: {}, stores: {}, freq: {} };
     const xy = await sub(S.dir, 'Excel YF');
     const dit = (await xlsxFiles(xy)).filter(h => /data item/i.test(h.name));
+    /* Items: la tabla única Item NBR del Centro (Documentos → Items Walmart). Si no está
+       (app abierta fuera del centro), el ITEM_Data del Excel YF como antes. */
+    const nbr = await itemsNBR();
+    S.itemsFuente = nbr ? 'nbr' : 'excel';
+    if (nbr) {
+      const n = aplicarItemsNBR(nbr.items);
+      log('Items: tabla Item NBR del Centro · ' + n + ' claves (' + nbr.items.length + ' items' + (nbr.de ? ', ' + nbr.de : '') + ')');
+    }
     if (dit.length) {
       const { wb } = await readBook(dit[0]);
-      const parsed = Core.parseItemData(sheetRows(wb, wb.SheetNames.find(n => /item/i.test(n))) || []);
+      const parsed = nbr ? {} : Core.parseItemData(sheetRows(wb, wb.SheetNames.find(n => /item/i.test(n))) || []);
       for (const k in parsed) {
         const cur = S.params.items[k];
         if (!cur) S.params.items[k] = Object.assign(parsed[k], { vida: null });
         else { if (!cur.itemD) cur.itemD = parsed[k].itemD; if (!cur.itemC) cur.itemC = parsed[k].itemC; }
       }
       masters.stores = Core.parseStrData(sheetRows(wb, wb.SheetNames.find(n => /str/i.test(n))) || []);
-      log('Maestro de items y tiendas: ' + dit[0].name + ' · ' + Object.keys(parsed).length + ' claves, ' + Object.keys(masters.stores).length + ' tiendas');
+      log('Maestro de ' + (nbr ? 'tiendas' : 'items y tiendas') + ': ' + dit[0].name + ' · ' + (nbr ? '' : Object.keys(parsed).length + ' claves, ') + Object.keys(masters.stores).length + ' tiendas');
     } else log('⚠ No encontré "Data Item y Tienda" en Excel YF');
     masters.items = S.params.items;
     const fqd = await sub(S.dir, 'Frecuencias');
@@ -954,9 +1000,11 @@ function vParam() {
    <span>Vida útil por defecto (días)</span>${inp('general.vidaUtil')}
    <span>Cancel date CEDI: días desde hoy</span>${inp('general.cancelCedi')}
    <span>Seguimiento OC: días de tolerancia después del cancel solicitado</span>${inp('general.seguimientoDias')}</div></section></div>`;
-  if (t === 'items') { const it = Object.values(P.items).sort((a, b) => a.clave.localeCompare(b.clave));
-    body = `<section class="card"><div class="between pad" style="align-items:center"><h2>Items</h2><button class="btn ghost" data-act="addItem">Agregar item</button></div><div class="tw"><table><thead><tr><th>Clave</th><th>Descripción</th><th>CID</th><th>Item Directo</th><th>Item CD</th><th>Vendor CD</th><th>Código OC Directa</th><th>Descripción OC Directa</th><th>Vida útil</th><th>VNPK</th><th>Activo</th><th></th></tr></thead><tbody>
+  if (t === 'items') { const nbr = S.itemsFuente === 'nbr'; const it = Object.values(P.items).filter(x => !nbr || x.itemD || x.itemC).sort((a, b) => a.clave.localeCompare(b.clave));
+    body = `<section class="card"><div class="between pad" style="align-items:center"><h2>Items</h2>${nbr ? '<span class="small muted">Claves, items, descripción y activo vienen de la tabla única <b>Item NBR</b> (Centro → Documentos → Items Walmart). Aquí solo se editan los datos propios de Desviaciones.</span>' : '<button class="btn ghost" data-act="addItem">Agregar item</button>'}</div><div class="tw"><table><thead><tr><th>Clave</th><th>Descripción</th><th>CID</th><th>Item Directo</th><th>Item CD</th><th>Vendor CD</th><th>Código OC Directa</th><th>Descripción OC Directa</th><th>Vida útil</th><th>VNPK</th><th>Activo</th><th></th></tr></thead><tbody>
     ${it.map(x => { const b = 'items.' + x.clave + '.'; const ti = (f, w) => `<input type="text" data-p="${b + f}" data-txt="1" value="${esc(x[f] == null ? '' : x[f])}" style="width:${w}px">`; const nu = (f, w) => `<input type="number" data-p="${b + f}" value="${esc(x[f] == null ? '' : x[f])}" style="width:${w}px">`;
+      const fijo = (f) => `<span>${esc(x[f] == null ? '—' : x[f])}</span>`;
+      if (nbr) return `<tr><td><b>${esc(x.clave)}</b></td><td>${fijo('desc')}</td><td>${fijo('cid')}</td><td>${fijo('itemD')}</td><td>${fijo('itemC')}</td><td><select data-p="${b}seqC"><option value="">—</option><option value="1" ${x.seqC == 1 ? 'selected' : ''}>811</option><option value="2" ${x.seqC == 2 ? 'selected' : ''}>812</option></select></td><td>${ti('codigoOC', 70)}</td><td>${ti('descOC', 240)}</td><td>${nu('vida', 60)}</td><td>${nu('vnpk', 50)}</td><td>${x.activo !== false ? 'Sí' : 'No'}</td><td></td></tr>`;
       return `<tr><td><b>${esc(x.clave)}</b></td><td>${ti('desc', 240)}</td><td>${nu('cid', 100)}</td><td>${nu('itemD', 100)}</td><td>${nu('itemC', 100)}</td><td><select data-p="${b}seqC"><option value="">—</option><option value="1" ${x.seqC == 1 ? 'selected' : ''}>811</option><option value="2" ${x.seqC == 2 ? 'selected' : ''}>812</option></select></td><td>${ti('codigoOC', 70)}</td><td>${ti('descOC', 240)}</td><td>${nu('vida', 60)}</td><td>${nu('vnpk', 50)}</td><td><input type="checkbox" data-p="${b}activo" ${x.activo !== false ? 'checked' : ''} aria-label="Activo ${esc(x.clave)}"></td><td><a data-act="delItem" data-k="${esc(x.clave)}">Eliminar</a></td></tr>`; }).join('')}</tbody></table></div>
     <div class="pager muted">Vendor CD vacío = se toma de Retail Link. Vida útil vacía = ${G.vidaUtil} días.</div></section>`; }
   if (t === 'tiendas') { const fq = S.data ? S.data.masters.freq : {}, sm = S.data ? S.data.masters.stores : {};
