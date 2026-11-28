@@ -233,6 +233,7 @@ table,td,th{font-variant-numeric:tabular-nums}
 <button data-view="detalle"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg>Detalle combinación</button>
 <button data-view="oc"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 2h9l5 5v15H6z"/><path d="M14 2v6h6M9 13h8M9 17h6"/></svg>OC Manuales</button>
 <button data-view="fcst"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 20h16M7 16V9M12 16V5M17 16v-4"/></svg>Ajuste FCST</button>
+<button data-view="devol"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg>Devoluciones</button>
 <button data-view="carga"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg>Carga de datos</button>
 <button data-view="param"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>Parámetros</button>
 <button id="install" hidden><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 7v7M9 11l3 3 3-3"/></svg>Instalar app</button>
@@ -248,7 +249,7 @@ table,td,th{font-variant-numeric:tabular-nums}
 <script>/*__CORE__*/</script>
 <script>
 'use strict';
-const VERSION = 'V.9';
+const VERSION = 'V.10';
 const $ = s => document.querySelector(s);
 const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmt = (n, d = 0) => n == null || isNaN(n) ? '—' : Number(n).toLocaleString('es-GT', { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -263,7 +264,7 @@ const S = {
   dir: null, frDir: null, params: Core.defaultParams(), data: null, A: null, view: 'resumen',
   filt: { canal: '', vendedor: '', formato: '', clave: '', estado: '', motivo: '', q: '', mant: false }, page: 1, sortKey: '',
   detKey: null, ocEdits: {}, ocExtra: [], fcEdits: {}, ocTab: '37', ocCediDate: '', paramTab: 'general', fcMot: null, trackOpen: null,
-  log: [], status: {}, solicitudes: [], track: [], cmpFreq: [], frSum: null, frWeek: null, chart: null
+  log: [], status: {}, solicitudes: [], track: [], cmpFreq: [], frSum: null, frWeek: null, chart: null, devWeek: null, devClave: ''
 };
 try { const d = JSON.parse(localStorage.getItem('ad_borrador') || '{}'); S.ocEdits = d.ocEdits || {}; S.ocExtra = d.ocExtra || []; S.fcEdits = d.fcEdits || {}; } catch (e) { }
 const saveDraft = () => { try { localStorage.setItem('ad_borrador', JSON.stringify({ ocEdits: S.ocEdits, ocExtra: S.ocExtra, fcEdits: S.fcEdits })); } catch (e) { } };
@@ -460,7 +461,7 @@ function publicarResumen() {
         top: alertas.slice(0, 3).map(c => ({ estado: c.estado, tienda: c.s, nombre: c.name || '', clave: c.clave, riesgo: c.lostPost || c.lost7 || 0, motivo: c.motivo || '' })) },
       ocManuales: { combinaciones: rojos.length, unidades: rojos.reduce((a, c) => a + (c.lostPost || 0), 0) },
       ventaFcst: lw ? { semana: lw, venta: vt, fcst: ft || null } : null,
-      evento } };
+      evento, devol: (() => { try { const R = devolDatos(); if (!R) return null; const L = R.weeks[R.weeks.length - 1], x = R.tot[L]; return { semana: L, venta: x.pos, dev: x.dev, pct: x.pos ? x.dev / x.pos : null }; } catch (e) { return null; } })() } };
     localStorage.setItem('cc.insight.desviaciones', JSON.stringify(msg));
     if (window.parent !== window) window.parent.postMessage({ tipo: 'cc:insight', id: 'desviaciones', insight: msg }, '*');
   } catch (e) { /* el resumen nunca debe romper la app */ }
@@ -504,9 +505,10 @@ function render() {
   if (S.chart) { S.chart.destroy(); S.chart = null; }
   const m = $('#main');
   if (!fsOK) { m.innerHTML = `<h1>Análisis Desviaciones</h1><div class="card pad">Este navegador no permite trabajar con carpetas. Abre la app en <b>Google Chrome</b> o <b>Microsoft Edge</b>.</div>`; return; }
-  if (!S.A && S.view !== 'param' && S.view !== 'carga') { m.innerHTML = vInicio(); return; }
-  m.innerHTML = ({ resumen: vResumen, detalle: vDetalle, oc: vOC, fcst: vFcst, carga: vCarga, param: vParam })[S.view]();
+  if (!S.A && S.view !== 'param' && S.view !== 'carga' && !(S.view === 'devol' && S.data)) { m.innerHTML = vInicio(); return; }
+  m.innerHTML = ({ resumen: vResumen, detalle: vDetalle, oc: vOC, fcst: vFcst, devol: vDevol, carga: vCarga, param: vParam })[S.view]();
   if (S.view === 'detalle') drawChart();
+  if (S.view === 'devol') drawDevChart();
 }
 function vInicio() {
   return `<div><div class="eyebrow">${VERSION}</div><h1>Análisis Desviaciones</h1></div>
@@ -794,6 +796,97 @@ function vFcst() {
   <tbody>${L.slice(0, 300).map(l => { const c = l.c, u = up(c); return `<tr style="${l.incl ? '' : 'opacity:.45'}"><td><input type="checkbox" data-fc-incl="${esc(c.key)}" ${l.incl ? 'checked' : ''} aria-label="Incluir ${c.s} ${esc(c.clave)}"></td><td><a data-det="${esc(c.key)}">${c.s} ${esc(c.name)}</a></td><td>${esc(c.clave)}</td><td>${c.canal}</td><td class="small">${esc(c.motivo)}${c.sesgoTxt ? '<br><span class="muted">' + esc(c.sesgoTxt) + '</span>' : ''}</td><td class="r">${fmt(c.fcst4)}</td><td class="r"><input class="num" type="number" min="0" data-fc-base="${esc(c.key)}" value="${l.base}" aria-label="Base ${c.s} ${esc(c.clave)}"></td>${W.map(w => { const f = c.fcstW[w], s = Math.round(l.base * (1 + (u[w] || 0))); return `<td class="r"><span class="muted">${fmt(f)}</span> → <b>${fmt(s)}</b></td>`; }).join('')}</tr>`; }).join('') || `<tr><td colspan="${7 + W.length}" class="empty">Sin ajustes sugeridos con estos filtros.</td></tr>`}</tbody></table></div>
   ${L.length > 300 ? `<div class="pager muted">Mostrando 300 de ${L.length}. Usa los filtros para acotar; la exportación incluye todas las marcadas.</div>` : ''}</section>`;
 }
+/* ---------- Devoluciones contra venta ----------
+   Venta Semanal (POS) y Devoluciones (VC + devolución de cliente) por tienda e item, juntadas
+   en su clave con el maestro de items. El valor en quetzales usa el precio promedio a Walmart
+   de cada clave, que Documentos del Centro saca del crudo semanal de bodega (rz.preciosWM). */
+function preciosWM() { try { return JSON.parse(localStorage.getItem('rz.preciosWM') || 'null'); } catch (e) { return null; } }
+function devolDatos() {
+  const D = S.data; if (!D || !D.dev || !D.venta) return null;
+  const byItem = {};
+  for (const k in D.masters.items) { const it = D.masters.items[k]; if (it.itemD) byItem[it.itemD] = k; if (it.itemC) byItem[it.itemC] = k; }
+  const weeks = Object.keys(D.dev).map(Number).filter(L => D.venta[L]).sort((a, b) => a - b);
+  if (!weeks.length) return null;
+  const tot = {}, porClave = {}, porTienda = {}, sinClave = new Set();
+  const acc = (o, L, campo, v) => { const x = o[L] || (o[L] = { pos: 0, dev: 0 }); x[campo] += v; };
+  for (const L of weeks) {
+    tot[L] = { pos: 0, dev: 0 };
+    for (const r of D.venta[L].rows) {
+      const c = byItem[r.i]; if (!c) { sinClave.add(r.i); continue; }
+      tot[L].pos += r.pos; acc(porClave[c] || (porClave[c] = {}), L, 'pos', r.pos);
+      const t = porTienda[r.s] || (porTienda[r.s] = { name: r.name, w: {}, c: {} }); acc(t.w, L, 'pos', r.pos); acc(t.c[c] || (t.c[c] = {}), L, 'pos', r.pos);
+    }
+    for (const r of D.dev[L].rows) {
+      const c = byItem[r.i]; if (!c) { sinClave.add(r.i); continue; }
+      tot[L].dev += r.dev; acc(porClave[c] || (porClave[c] = {}), L, 'dev', r.dev);
+      const t = porTienda[r.s] || (porTienda[r.s] = { name: '', w: {}, c: {} }); acc(t.w, L, 'dev', r.dev); acc(t.c[c] || (t.c[c] = {}), L, 'dev', r.dev);
+    }
+  }
+  const pr = preciosWM();
+  return { weeks, tot, porClave, porTienda, sinClave: [...sinClave], precios: pr && pr.precios || null, preciosDe: pr };
+}
+const dPct = x => x && x.pos > 0 ? x.dev / x.pos : (x && x.dev > 0 ? null : 0);
+const sumW = (o, Ls) => Ls.reduce((a, L) => { const x = o[L]; if (x) { a.pos += x.pos; a.dev += x.dev; } return a; }, { pos: 0, dev: 0 });
+function vDevol() {
+  const R = devolDatos();
+  if (!R) return `<div><div class="eyebrow">Venta Semanal y Devoluciones de Retail Link</div><h1>Devoluciones</h1></div><div class="card pad">Todavía no hay una semana con Venta Semanal y Devoluciones juntas. Súbelas en <b>Documentos</b> del Centro (o ponlas en las carpetas Venta Semanal y Devoluciones) y toca Actualizar.</div>`;
+  const W = R.weeks, L = W.includes(S.devWeek) ? S.devWeek : W[W.length - 1];
+  const i = W.indexOf(L), prev4 = W.slice(Math.max(0, i - 4), i), ult4 = W.slice(Math.max(0, i - 3), i + 1);
+  const P = R.precios, q = (c, u) => P && P[c] != null ? u * P[c] : null;
+  const cf = S.devClave;
+  const totL = cf ? (R.porClave[cf] || {})[L] || { pos: 0, dev: 0 } : R.tot[L];
+  const totP = cf ? sumW(R.porClave[cf] || {}, prev4) : sumW(R.tot, prev4);
+  const pctL = dPct(totL), pctP = prev4.length ? dPct(totP) : null;
+  const valL = cf ? q(cf, totL.dev) : (P ? Object.entries(R.porClave).reduce((a, [c, o]) => a + (q(c, (o[L] || {}).dev || 0) || 0), 0) : null);
+  const claves = Object.entries(R.porClave).map(([c, o]) => {
+    const x = o[L] || { pos: 0, dev: 0 }, y = sumW(o, ult4), z = sumW(o, prev4);
+    return { c, x, y, p: dPct(x), p4: dPct(y), pAnt: prev4.length ? dPct(z) : null, q: q(c, x.dev), q4: q(c, y.dev) };
+  }).filter(r => r.x.pos || r.x.dev || r.y.dev).sort((a, b) => (b.q4 ?? b.y.dev) - (a.q4 ?? a.y.dev));
+  const tiendas = Object.entries(R.porTienda).map(([s, t]) => {
+    const src = cf ? (t.c[cf] || {}) : t.w;
+    const y = sumW(src, ult4), x = src[L] || { pos: 0, dev: 0 };
+    const q4 = P ? (cf ? q(cf, y.dev) : Object.entries(t.c).reduce((a, [c, o]) => a + (q(c, sumW(o, ult4).dev) || 0), 0)) : null;
+    return { s, name: t.name, x, y, p4: dPct(y), p: dPct(x), q4 };
+  }).filter(r => r.y.dev > 0).sort((a, b) => b.y.dev - a.y.dev);
+  const G = S.params.general, alta = (G.devAltaPct || 15) / 100;
+  const pill = v => v == null ? '<span class="chip">sin venta</span>' : `<span class="${v >= alta ? 'chip warn' : 'muted'}">${pct(v, 1)}</span>`;
+  const flecha = (a, b) => a == null || b == null ? '' : a > b * 1.15 ? ' <span title="Sube contra las 4 semanas anteriores" style="color:var(--rz-crit,#F87171)">▲</span>' : a < b * 0.85 ? ' <span title="Baja contra las 4 semanas anteriores" style="color:var(--rz-ok,#4ADE80)">▼</span>' : '';
+  const Q = v => v == null ? '—' : 'Q' + fmt(v);
+  const sobre = tiendas.filter(t => t.y.dev > t.y.pos).length;
+  return `
+  <div class="between"><div><div class="eyebrow">Devolución = (VC + devolución de cliente) ÷ venta POS · ${ult4.length} semanas = ${wkTxt(ult4[0])} a ${wkTxt(L)}</div><h1>Devoluciones</h1></div>
+  <div class="chips"><select data-act="devWeek" aria-label="Semana">${W.slice().reverse().map(w => `<option value="${w}" ${w === L ? 'selected' : ''}>${wkTxt(w)}</option>`).join('')}</select>
+  <select data-act="devClave" aria-label="Clave"><option value="">Todas las claves</option>${Object.keys(R.porClave).sort().map(c => `<option ${c === cf ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div></div>
+  <div class="kpis">
+   <div class="card kpi"><div class="l">Vendido ${wkTxt(L)}</div><div class="v">${fmt(totL.pos)}</div><div class="s">bolsas en POS${cf ? ' · ' + esc(cf) : ''}</div></div>
+   <div class="card kpi"><div class="l">Devuelto</div><div class="v">${fmt(totL.dev)}</div><div class="s">${valL != null ? Q(valL) + ' a precio Walmart' : 'sin precios: carga el crudo semanal de bodega en Documentos'}</div></div>
+   <div class="card kpi"><div class="l">Devolución</div><div class="v">${pct(pctL, 1)}${flecha(pctL, pctP)}</div><div class="s">${pctP != null ? 'antes ' + pct(pctP, 1) + ' (4 sem)' : 'sin semanas anteriores'}</div></div>
+   <div class="card kpi"><div class="l">Tiendas que devuelven más de lo que venden</div><div class="v">${sobre}</div><div class="s">en las últimas ${ult4.length} semanas</div></div>
+  </div>
+  <section class="card pad"><h2>Tendencia semanal${cf ? ' · ' + esc(cf) : ''}</h2><div style="height:260px;margin-top:10px"><canvas id="devChart" aria-label="Devolución por semana"></canvas></div></section>
+  <section class="card"><div class="between pad" style="align-items:center"><h2>Por clave</h2><span class="small muted">${P ? 'Precio promedio a Walmart del crudo ' + esc(fdate(R.preciosDe.desde)) + ' a ' + esc(fdate(R.preciosDe.hasta)) : ''}${R.sinClave.length ? ' · ' + R.sinClave.length + ' item(s) sin clave en el maestro' : ''}</span></div>
+  <div class="tw"><table><thead><tr><th>Clave</th><th class="r">Vendido</th><th class="r">Devuelto</th><th class="r">%</th><th class="r">% 4 sem</th><th class="r">% 4 sem antes</th><th class="r">Valor sem</th><th class="r">Valor 4 sem</th></tr></thead>
+  <tbody>${claves.map(r => `<tr${r.c === cf ? ' style="background:var(--rz-elev,#1F232B)"' : ''}><td><b>${esc(r.c)}</b> <span class="muted small">${esc((S.params.items[r.c] || {}).desc || '')}</span></td><td class="r">${fmt(r.x.pos)}</td><td class="r">${fmt(r.x.dev)}</td><td class="r">${pill(r.p)}</td><td class="r">${pill(r.p4)}${flecha(r.p4, r.pAnt)}</td><td class="r muted">${r.pAnt == null ? '—' : pct(r.pAnt, 1)}</td><td class="r">${Q(r.q)}</td><td class="r"><b>${Q(r.q4)}</b></td></tr>`).join('') || '<tr><td colspan="8" class="empty">Sin datos.</td></tr>'}</tbody></table></div></section>
+  <section class="card"><div class="between pad" style="align-items:center"><h2>Tiendas con más devolución · ${ult4.length} semanas${cf ? ' · ' + esc(cf) : ''}</h2><span class="small muted">${tiendas.length} tiendas con devolución</span></div>
+  <div class="tw"><table><thead><tr><th>Tienda</th><th class="r">Vendido 4 sem</th><th class="r">Devuelto 4 sem</th><th class="r">% 4 sem</th><th class="r">% ${wkTxt(L)}</th><th class="r">Valor 4 sem</th></tr></thead>
+  <tbody>${tiendas.slice(0, 40).map(t => `<tr><td>${t.s} ${esc(t.name)}</td><td class="r">${fmt(t.y.pos)}</td><td class="r">${fmt(t.y.dev)}</td><td class="r">${pill(t.p4)}</td><td class="r">${pill(t.p)}</td><td class="r">${Q(t.q4)}</td></tr>`).join('') || '<tr><td colspan="6" class="empty">Sin devoluciones.</td></tr>'}</tbody></table></div>
+  ${tiendas.length > 40 ? `<div class="pager muted">Mostrando 40 de ${tiendas.length}.</div>` : ''}</section>`;
+}
+function drawDevChart() {
+  const R = devolDatos(), el = $('#devChart'); if (!R || !el || typeof Chart === 'undefined') return;
+  const cf = S.devClave, src = cf ? (R.porClave[cf] || {}) : R.tot;
+  const W = R.weeks.slice(-12);
+  const dev = W.map(L => (src[L] || {}).dev || 0), pc = W.map(L => { const v = dPct(src[L]); return v == null ? null : Math.round(v * 1000) / 10; });
+  if (window.Chart) { Chart.defaults.color = '#9CA3AF'; Chart.defaults.borderColor = '#262A32'; }
+  S.chart = new Chart(el, {
+    data: { labels: W.map(L => 'S' + String(L % 100).padStart(2, '0')), datasets: [
+      { type: 'bar', label: 'Devuelto (bolsas)', data: dev, backgroundColor: '#9AA7B8', borderRadius: 3, yAxisID: 'y', order: 2 },
+      { type: 'line', label: '% de lo vendido', data: pc, borderColor: '#D98A00', backgroundColor: '#D98A00', borderWidth: 2.5, pointRadius: 3, yAxisID: 'y1', spanGaps: true, order: 1 }] },
+    options: { maintainAspectRatio: false, animation: false, interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 12 } } }, tooltip: { callbacks: { label: x => x.dataset.label + ': ' + fmt(x.parsed.y, x.dataset.yAxisID === 'y1' ? 1 : 0) + (x.dataset.yAxisID === 'y1' ? '%' : '') } } },
+      scales: { y: { beginAtZero: true, grid: { color: '#262A32' }, ticks: { font: { size: 11 } } }, y1: { beginAtZero: true, position: 'right', grid: { display: false }, ticks: { font: { size: 11 }, callback: v => v + '%' } }, x: { grid: { display: false }, ticks: { font: { size: 11 } } } } }
+  });
+}
 async function exportFcst() {
   if (!S.dir) return toast('Conecta la carpeta del proyecto.');
   const L = fcVisible().L.filter(l => l.incl); if (!L.length) return toast('No hay combinaciones marcadas con esos motivos.');
@@ -936,6 +1029,8 @@ document.addEventListener('change', e => {
   const el = e.target;
   if (el.dataset.filt) { S.filt[el.dataset.filt] = el.type === 'checkbox' ? el.checked : el.value; S.page = 1; render(); return; }
   if (el.dataset.act === 'goto') { S.detKey = el.value; render(); return; }
+  if (el.dataset.act === 'devWeek') { S.devWeek = +el.value; render(); return; }
+  if (el.dataset.act === 'devClave') { S.devClave = el.value; render(); return; }
   if (el.dataset.act === 'cediDate') { S.ocCediDate = el.value; render(); return; }
   if (el.dataset.ocIncl) { const k = el.dataset.ocIncl, c = S.A.combos.find(x => x.key === k); if (c.estado === 'rojo') (S.ocEdits[k] || (S.ocEdits[k] = {})).incl = el.checked; else if (!el.checked) S.ocExtra = S.ocExtra.filter(x => x.key !== k); saveDraft(); render(); return; }
   if (el.dataset.ocQty) { (S.ocEdits[el.dataset.ocQty] || (S.ocEdits[el.dataset.ocQty] = {})).qty = Math.max(0, +el.value || 0); saveDraft(); render(); return; }
